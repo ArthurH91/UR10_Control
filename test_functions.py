@@ -1,6 +1,4 @@
 import numpy as np
-from gradient_descent import *
-from line_search import *
 from linesearch_class import *
 
 def test_function_1(x):
