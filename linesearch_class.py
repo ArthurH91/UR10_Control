@@ -1,254 +1,277 @@
 import numpy as np
 
-class LineSearch:
-    def __init__(self, f, grad, hessf = None, alpha = 0.5, beta = 0.8, max_iter = 10000, eps = 1e-6, ls_type = "backtracking", step_type = "l2_steepest", cond = "Armijo"):
-        """
-        Initialize line search object with a function and its gradient.
-        
-        Args:
-        - f: function to minimize
-        - grad: gradient of the function
-        - hessf (function, optional): Function handle of the hessian of the function to minimize. Defaults to None.
-        - alpha: fraction to decrease step size
-        - beta: factor to decrease function value
-        - max_iter: maximum number of iterations
-        - eps: tolerance for convergence
-        - ls_type: type of linesearch : backtracking, zoom
-        - step_type: Type of step ("newton", "l2_steepest", "l1_steepest", ...). Defaults to "l2_steepest"
-        - cond: Armijo condition or Wolfe conditions
-        """
-        self.f = f
-        self.grad = grad
-        self.hessf = hessf
-        self.alpha = alpha
-        self.beta = beta
-        self.max_iter = max_iter
-        self.eps = eps
-        self.ls_type = ls_type
-        self.step_type = step_type
-        self.cond = cond
 
+class LineSearch:
+    def __init__(self, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve):
+        """Initialize line search object with the cost function and its gradient, along with numerical and categorical parameters.
+
+        Args:
+            f (function handle): Function handle of the minimization objective function.
+            grad (function handle): Function handle of the gradient of the minimization objective function.
+            hess (function handle, optional): Function handle of the hessian of the minimization objective function. Defaults to None.
+            alpha (float, optional): Initial guess for step size. Defaults to 0.5.
+            alpha_max (float, optional): Maximum step size. Defaults to 10.
+            beta (float, optional): Default decrease on backtracking. Defaults to 0.8.
+            max_iter (int, optional): Maximum number of iterations. Defaults to 1e3.
+            eps (float, optional): Tolerance for convergence. Defaults to 1e-6.
+            ls_type (str, optional): Linesearch type. Defaults to "backtracking".
+            step_type (str, optional): Type of step ("newton", "l2_steepest", "l1_steepest", ...). Defaults to "l2_steepest".
+            cond (str, optional): Conditions to check at each iteration. Defaults to "Armijo".
+            armijo_const (float, optional): Constant in the checking of Armijo condition. Defaults to 1e-4.
+            wolfe_curvature_const (float, optional): Constant in the checking of the stong Wolfe curvature condition. Defaults to 0.8.
+            lin_solver (function handle, optional): Solver for linear systems. Defaults to np.linalg.solve.
+        """
+
+        # Initialize the object
+        self._f = f
+        self._grad = grad
+        self._hess = hess
+        self._alpha = alpha
+        self._alpha_max = alpha_max
+        self._beta = beta
+        self._max_iter = max_iter
+        self._eps = eps
+        self._ls_type = ls_type
+        self._step_type = step_type
+        self._cond = cond
+        self._armijo_const = armijo_const
+        self._wolfe_curvature_const = wolfe_curvature_const
+        self._lin_solver = lin_solver
 
     def set_wolfe_conditions_constants(self):
         return None
 
-    def __call__(self, x0: np.ndarray, ns_solver = np.linalg.solve):
+    def __call__(self, x0: np.ndarray):
         """
         Performs a line search optimization algorithm on the function f.
-        
+
         Args:
         - x: current point
-        - ns_solver (function, optional): Function handle of the solver to use for solving the Newton step. Defaults to np.linalg.solve.
-        
+
         Returns:
         x: Solution of the descent search.
         fval: Function value at the solution of the search.
         gradfval: Function gradient value at the solution of the search.
         """
         # Print header
-        self.line_search_print_header()
+        self._print_header()
 
-        # Initialize counter of iterations
-        cnt_iter = 0
         # Initialize guess
-        x = x0
-        # Initialize stepsize
-        step_size_k = self.alpha
+        self._xval_k = x0
+        # Initialize iteration counter
+        self._iter_cnter = 0
+        # Initialize current stepsize
+        self._alpha_k = self._alpha
 
         # Start
         while True:
 
             # Evaluate function
-            fval_k = self.f(x)
+            self._fval_k = self._f(self._xval_k)
             # Evaluate gradient
-            gradfval_k = self.grad(x)
+            self._gradval_k = self._grad(self._xval_k)
             # Evaluate hessian if step_type = newton
-            if self.step_type == "newton":
-                hessfval_k = self.hessf(x)
+            if self._step_type == "newton":
+                self._hessval_k = self._hess(self._xval_k)
+            # Update hessian if step_type = "bfgs"
+            elif self._step_type == "bfgs":
+                self._bfgs_update()
+            # Else maintain a None pointer to the
             else:
-                hessfval_k = None 
-            # Evaluate norm of gradient
-            norm_gradfval_k = np.linalg.norm(gradfval_k)
+                self._hessval_k = None
 
-            # Print
-            self.line_search_print_iteration(
-                cnt_iter, fval_k, norm_gradfval_k, step_size_k)
+            # Evaluate norm of gradient
+            self._norm_gradfval_k = np.linalg.norm(self._gradval_k)
+
+            # Print current iterate
+            self._print_iteration()
             # Every 30 iterations print header
-            if cnt_iter % 30 == 29:
-                self.line_search_print_header()
+            if self._iter_cnter % 30 == 29:
+                self._print_header()
 
             # Check stopping conditions
-            if self.line_search_convergence_criterion(norm_gradfval_k, self.eps) or self.line_search_exceeded_iterations(cnt_iter, self.max_iter):
+            if self._convergence_condition() or self._exceeded_maximum_iterations():
                 break
 
             # Compute search direction
-            search_dir_k = self.line_search_compute_search_direction(
-                fval_k, gradfval_k, hessfval_k, ns_solver)
+            self._search_dir_k = self._compute_search_direction()
+
+            # Compute directional derivative
+            self._dir_deriv_k = self._compute_current_directional_derivative()
 
             # Choose stepsize
-            step_size_k = self.line_search_choose_stepsize(fval_k, gradfval_k, x, search_dir_k)
+            self._alpha_k = self._compute_stepsize()
 
             # Update solution
-            x = x + step_size_k * search_dir_k
+            self._xval_k = self._xval_k + self._alpha_k * self._search_dir_k
 
             # Update iteration counter
-            cnt_iter += 1
+            self._iter_cnter += 1
 
         # Print output message
-        self.line_search_print_output(cnt_iter, fval_k, norm_gradfval_k)
+        self._print_output()
 
         # Return
-        return x, fval_k, gradfval_k
+        return self._xval_k, self._fval_k, self._gradval_k
 
-    
-    def line_search_exceeded_iterations(self, cnt_iter: int, max_iter: int):
+    def _exceeded_maximum_iterations(self):
         """Determines if the algorithm exceeded maximum iteration count.
-        Args:
-            cnt_iter (int): Iteration counter.
-            max_iter (int): Maximum number of iterations.
+
+        Properties used:
+            self._iter_cnter (int): Iteration counter.
+            self._max_iter (int): Maximum number of iterations.
+
         Returns:
             bool: Did the iteration counter exceed the maximum number of iterations?
         """
-        return cnt_iter > max_iter
-    
-    def line_search_convergence_criterion(self, norm_gradfval_k: float, eps: float):
+        return self._iter_cnter > self._max_iter
+
+    def _convergence_condition(self):
         """Determines if the algorithm attained the desired tolerance in satisfying the convergence conditions.
 
-        Args:
-            norm_gradfval_k (float): Norm of the gradient.
-            eps (float): Epsilon tolerance.
+        Properties used:
+            self._norm_gradfval_k (float): Norm of the gradient.
+            self._eps (float): Convergence tolerance.
 
         Returns:
             bool: Is the norm of the gradient smaller than the tolerance?
         """
-        return norm_gradfval_k < eps
+        return self._norm_gradfval_k < self._eps
 
-    
-    def line_search_print_header(self):
+    def _print_header(self):
         """Prints the header of the optimization textual output.
         """
         print("{:<7}".format("Iter.") + " | " + "{:^10}".format("f(x)") +
-            " | " + "{:^10}".format("||df(x)||") + " | " + "{:^10}".format("||d||"))
-    
+              " | " + "{:^10}".format("||df(x)||") + " | " + "{:^10}".format("||d||"))
 
-    def line_search_print_iteration(self, cnt_iter: int, fval_k: float, norm_gradfval_k: float, step_size_k: float):
+    def _print_iteration(self):
         """Prints the information of a single iteration of the gradient descent algorithm.
-        Args:
-            cnt_iter (int): Iteration counter.
-            fval_k (float): Function value at current iterate.
-            norm_gradfval_k (float): Gradient norm value at current iterate.
-            step_size_k (float): Size of the step at current iterate.
+
+        Properties used:
+            self._iter_cnter (int): Iteration counter.
+            self._fval_k (float): Function value at current iterate.
+            self._norm_gradfval_k (float): Gradient norm value at current iterate.
+            self._alpha_k (float): Size of the step at current iterate.
         """
-        print(("%7d" % cnt_iter) + " | " + ("%.4e" % fval_k) + " | " +
-            ("%.4e" % norm_gradfval_k) + " | " + ("%.4e" % step_size_k))
+        print(("%7d" % self._iter_cnter) + " | " + ("%.4e" % self._fval_k) + " | " +
+              ("%.4e" % self._norm_gradfval_k) + " | " + ("%.4e" % self._alpha_k))
 
-
-    def line_search_print_output(self, cnt_iter: int, fval_k: float, norm_gradfval_k: float):
+    def _print_output(self):
         """Prints the final message of the search.
-        Args:
-            cnt_iter (int): Iteration counter.
-            fval_k (float): Function value at current iterate.
-            norm_gradfval_k (float): Gradient norm value at current iterate.
-            eps (float): Tolerance on the first order optimality condition for convergence.
-            max_iter (int): Maximum number of iterations to perform.
+
+        Properties used:
+            self._iter_cnter (int): Iteration counter.
+            self._fval_k (float): Function value at current iterate.
+            self._norm_gradfval_k (float): Gradient norm value at current iterate.
         """
         # If the algorithm converged
-        if self.line_search_convergence_criterion(norm_gradfval_k=norm_gradfval_k, eps= self.eps):
+        if self._convergence_condition():
             print()
-            print(f"The {self.step_type} method successfully converged in %d iterations." % cnt_iter)
-            print("Optimal function value: %.4e." % fval_k)
-            print("Optimality conditions : %.4e." % norm_gradfval_k)
+            print("Gradient descent successfully converged in %d iterations." %
+                  self._iter_cnter)
+            print("Optimal function value: %.4e." % self._fval_k)
+            print("Optimality conditions : %.4e." % self._norm_gradfval_k)
 
         # If the algorithm exceeded the iterations
-        if self.line_search_exceeded_iterations(cnt_iter=cnt_iter, max_iter=self.max_iter):
+        if self._exceeded_maximum_iterations():
             print()
-            print("Gradient descent exceeded the maximum number (%d) of iterations." % self.max_iter)
-            print("Current function value: %.4e." % fval_k)
-            print("Current optimality conditions : %.4e." % norm_gradfval_k)
+            print(
+                "Gradient descent exceeded the maximum number (%d) of iterations." % self._max_iter)
+            print("Current function value: %.4e." % self._fval_k)
+            print("Current optimality conditions : %.4e." %
+                  self._norm_gradfval_k)
 
+    def _compute_current_directional_derivative(self):
+        """Computes the directional derivative at current iterate.
+        Returns:
+            float: Directional derivative at current iterate.
+        """
+        # Product between current gradient and current search direction
+        return np.dot(self._gradval_k, self._search_dir_k)
 
-    def line_search_compute_search_direction(self, fval_k: float, gradfval_k: np.ndarray, hessfval_k = [], ns_solver=np.linalg.solve):
+    def _compute_directional_derivative(self, xval: np.ndarray, search_dir: np.ndarray):
+        """Computes the directional derivative at a given point, for a given direction.
+        Args:
+            xval (np.ndarray): Point at which to calculate the directional derivative.
+            search_dir (np.ndarray): Direction along which to calculate the directional derivative.
+        Returns:
+            float: Directional derivative at current iterate.
+        """
+        # Compute gradient at the point
+        gradval = self._grad(xval)
+        # Return directional derivative as the dot product between the gradient
+        # and the search direction
+        return np.dot(gradval, search_dir)
+
+    def _compute_search_direction(self):
         """Computes the search direction for the line search.
 
-        Args:
-            fval_k (float): Function value at current iterate.
-            gradfval_k (np.ndarray): Function gradient value at current iterate.
-            hessfval_k (np.ndarray, optional): Value of the hessian fonction at the current iteration. Defaults to [].
-            ns_solver (_type_, optional): Defaults to np.linalg.solve.
+        Properties used:
+            self._step_type (string): Type of search direction to compute.
+            self._gradval_k (np.ndarray): Function gradient value at current iterate.
+            self._hessval_k (np.ndarray, optional): Value of the hessian fonction at the current iteration. Defaults to None.
+
+            self._lin_solver (function handle, optional): Solver for linear systems. Defaults to np.linalg.solve.
         """
         # If we want the steepest descent direction in the L2 norm
-        if self.step_type == "l2_steepest":
-            return -gradfval_k
-        if self.step_type == "newton":
-            return ns_solver(hessfval_k, - gradfval_k)
-        if self.step_type == "bfgs":
-            return 
-    
-    def line_search_armijo_condition_is_true(self, fval_k, gradfval_k, x, alpha, search_dir_k):
-        """Check whether the Armijo condition is respected.
+        if self._step_type == "l2_steepest":
+            return -self._gradval_k
+        if self._step_type == "newton":
+            return self._lin_solver(self._hessval_k, -self._gradval_k)
+        if self._step_type == "bfgs":
+            return self._compute_bfgs_step()
 
-
-        Parameters
-        ----------
-        fval_k : np.ndarray
-            Value of f 
-        gradfval_k : _type_
-            _description_
-        x : _type_
-            _description_
-        search_dir_k : _type_
-            _description_
-
+    def _armijo_condition_is_true(self, alpha, fval_alpha):
+        """Check whether the Armijo condition is respected for a given step size, and function value corresponding to the step size. 
+        Args:
+            alpha (float): Value of step-size for which to check the condition.
+            fval_alpha (float): Value of function at the point given by the stepsize.
+        Properties used:
+            self._f (function handle): Function handle of the minimization objective function.
+            self._xval_k (np.ndarray): Value of the current iterate.
+            self._search_dir_k (np.ndarray): The search direction at current iterate.
+            self._dir_deriv_k (float): The directional derivative of the function along current search direction.        
         Returns
-        -------
-        Boolean
-            True if Armijo condition is respected.
+            bool: True if Armijo condition is respected.
         """
-        # Armijo number
-        c = 0.8
-        # Calculate the value of the function at the next iter
-        fnext = self.f(x + alpha * search_dir_k)
-        # Calculate the directional derivative along the search direction
-        dirderiv = alpha * np.dot(gradfval_k, search_dir_k)
+        # Return truth value of Armijo condition
+        return fval_alpha <= self._fval_k + self._armijo_const * alpha * self._dir_deriv_k
 
-        # Return Armijo condition
-        return fnext < fval_k + c * dirderiv
-
-    def line_search_choose_stepsize(self, fval_k : float, gradfval_k : np.ndarray, x : np.ndarray, search_dir_k : np.ndarray):
+    def _compute_stepsize(self):
         """Chooses the stepsize of the line search.
 
         Args:
-            f (_type_): _description_
-            gf (_type_): _description_
-            fval_k (float): _description_
-            gradfval_k (np.ndarray): _description_
-            x (np.ndarray): _description_
-            search_dir_k (np.ndarray): _description_
-            alpha (float): _description_
             ls_type (str, optional): _description_. Defaults to "backtracking".
         """
         # When the type is backtracking
-        if self.ls_type == "backtracking":
+        if self._ls_type == "backtracking":
+            # Call the backtracking method
+            return self._backtracking()
+        # When the type is advanced
+        if self._ls_type == "advanced":
+            # Call the advanced line search algorithm
+            return self._advanced_line_search()
 
-            # Choose ro
-            ro = 0.7
-            # Initialize the step iterate
-            alpha = self.alpha
-            
-            # Repeat
-            while True:
+    def _backtracking(self):
+        """Calculates a step using backtracking.
 
-                # Check stopping conditions
-                if self.line_search_armijo_condition_is_true(fval_k, gradfval_k, x, alpha, search_dir_k):
-                    break
+        Returns:
+            float: Step value computed by the backtracking.
+        """
+        # Initialize the step iterate
+        alpha = self._alpha
+        # Repeat
+        while True:
+            # Caclulate current function value
+            fval_curr = self._f(self._xval_k + alpha * self._search_dir_k)
+            # Check stopping conditions
+            if self._armijo_condition_is_true(alpha=alpha, fval_alpha=fval_curr):
+                break
+            # Otherwise diminish alpha
+            alpha = self._beta * alpha
+        # Return
+        return alpha
 
-                # Otherwise diminish alpha
-                alpha = ro * alpha
-            
-            # Return
-            return alpha
-            
-    
 
 if __name__ == "__main__":
 
