@@ -11,6 +11,7 @@ from linesearch_class import LineSearch
 
 def cost_function(q): return robot_optimization_object.compute_cost_function(q)
 def gradient_cost_function(q): return robot_optimization_object.compute_gradient_cost_function(q)
+def hessian(q): return robot_optimization_object._compute_hessian(q)
 
 class Linesearch_with_display(LineSearch):
 
@@ -125,19 +126,19 @@ class Linesearch_with_display(LineSearch):
 
             # Update solution
             self._xval_k = self._xval_k + self._alpha_k * self._search_dir_k
+            
 
             # Update iteration counter
             self._iter_cnter += 1
 
             # Displaying the result on the meshcat.Visualizer
             vis.display(self._xval_k)
-            input()
             # Adding the cost function to the history
             self._f_val_history.append(self._fval_k)
 
             # Adding the current solution to the history
             self._xval_history.append(self._xval_k)
-
+            # input()
         # Print output message
         self._print_output()
 
@@ -159,7 +160,7 @@ class Linesearch_with_display(LineSearch):
 
 if __name__ == "__main__":
 
-    pin.seed(0)
+    # pin.seed(0)
     robot_wrapper_test = robot_wrapper()
     robot, rmodel, gmodel = robot_wrapper_test(target=True)
     rdata = rmodel.createData()
@@ -170,16 +171,27 @@ if __name__ == "__main__":
     robot_optimization_object = robot_optimization(rmodel, rdata, gmodel, gdata, vis)
 
 
-    gradient_descent = Linesearch_with_display(vis,cost_function, gradient_cost_function, max_iter=10, alpha = 1e-1, beta = 0.5, plot_cost_function= False)
+    gradient_descent = Linesearch_with_display(vis,cost_function, gradient_cost_function, hessian, max_iter=10, alpha = 1, beta = 0.5, plot_cost_function= True, step_type="newton")
     test = gradient_descent(q)
     print(f"The q are the following : {gradient_descent._xval_history}")
 
-    print(gradient_descent._xval_history[0])
+    # print(gradient_descent._xval_history[0])
 
-    q0 = gradient_descent._xval_history[0]
+    # q0 = gradient_descent._xval_history[0]
 
-    test_dist = robot_optimization_object._compute_vector_between_two_frames("endeff_geom", "target_geom", q0)
+    # test_dist = robot_optimization_object._compute_vector_between_two_frames("endeff_geom", "target_geom", q0)
 
-    print(f"Test dist : {test_dist}")
+    # print(f"Test dist : {test_dist}")
 
-    
+    input()
+    M_target = robot_wrapper_test._M_target
+    print(M_target)
+    q_target = robot_wrapper_test._q_target
+    print(q_target)
+    pin.framesForwardKinematics(rmodel, rdata, q_target)
+    pin.updateGeometryPlacements(rmodel, rdata, gmodel, gdata, q_target)
+    vis.display(q_target)
+    print(cost_function(q_target))
+    print(gradient_cost_function(q_target))
+    print(np.linalg.norm(robot_optimization_object._compute_vector_between_two_frames("endeff_geom", "target_geom", q_target)))
+    print(hessian(q).shape)

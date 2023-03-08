@@ -100,12 +100,12 @@ class robot_optimization():
         Parameters
         ----------
         q : np.ndarray
-            _description_
+            Array of the configuration of the robot
 
         Returns
         -------
         _type_
-            _description_
+            Returns the gradient of the cost function.
         """
 
         # Computing the distance vector between the end effector geometrical frame and the target geometrical frame.
@@ -116,9 +116,35 @@ class robot_optimization():
         jacobian = pin.computeFrameJacobian(
             self._rmodel, self._rdata, q, self._rmodel.getFrameId("endeff"), pin.LOCAL)[:3, :]
         return np.dot(jacobian.transpose(), dist)
+    
+    def _compute_hessian(self, q: np.ndarray):
+        """Returns hessian matrix of the end effector at a q position
+
+        Parameters
+        ----------
+        q : np.ndarray
+            Array of the configuration of the robot
+
+        Returns
+        -------
+        Hessian matrix : np.ndaraay
+            Hessian matrix at a given q configuration of the robot
+        """
+        return pin.computeFrameJacobian(self._rmodel, self._rdata, q, self._rmodel.getFrameId("endeff"), pin.LOCAL)
 
     def callback(self, q: np.ndarray):
         self._vis.display(q)
+
+    def _update_robot(self, q: np.ndarray):
+        """Updates the models and the datas of the robot.
+
+        Parameters
+        ----------
+        q : np.ndarray
+            Array of the configuration of the robot
+        """
+        pin.framesForwardKinematics(self._rmodel, self._rdata, q)
+        pin.updateGeometryPlacements(self._rmodel, self._rdata, self._gmodel, self._gdata, q)
 
 if __name__ == "__main__":
     
