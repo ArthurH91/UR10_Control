@@ -1,4 +1,4 @@
-# To test the solver : 
+# To test the solver
 
 In a terminal window : 
 
