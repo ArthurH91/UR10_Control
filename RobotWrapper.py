@@ -4,8 +4,10 @@ import example_robot_data as robex
 from visualizer import create_visualizer
 import hppfcl
 
-class robot_wrapper():
+# This class is for unwrapping an URDF and converting it to a model. It is also possible to add objects in the model,
+# such as a ball at a specific position.
 
+class RobotWrapper():
     def __init__(self, scale=1.0, name_robot="ur10"):
         """Initialize the wrapper with a scaling number of the target and the name of the robot wanted to get unwrapped.
 
@@ -133,6 +135,6 @@ class robot_wrapper():
 
 if __name__ == "__main__":
 
-    robot_wrapper_test = robot_wrapper()
-    robot, rmodel, gmodel = robot_wrapper_test(target=True)
+    robot_wrapper = RobotWrapper()
+    robot, rmodel, gmodel = robot_wrapper(target=True)
     vis = create_visualizer(robot)

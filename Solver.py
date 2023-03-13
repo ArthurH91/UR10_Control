@@ -1,9 +1,9 @@
 import numpy as np
 
 
-class LineSearch:
-    def __init__(self, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve):
-        """Initialize line search object with the cost function and its gradient, along with numerical and categorical parameters.
+class Solver:
+    def __init__(self, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False):
+        """Initialize solver object with the cost function and its gradient, along with numerical and categorical parameters.
 
         Args:
             f (function handle): Function handle of the minimization objective function.
@@ -20,6 +20,7 @@ class LineSearch:
             armijo_const (float, optional): Constant in the checking of Armijo condition. Defaults to 1e-4.
             wolfe_curvature_const (float, optional): Constant in the checking of the stong Wolfe curvature condition. Defaults to 0.8.
             lin_solver (function handle, optional): Solver for linear systems. Defaults to np.linalg.solve.
+            bool_plot_cost_function (bool, optional): Boolean determining whether the user wants to print a plot of the cost function, by default False
         """
 
         # Initialize the object
@@ -37,6 +38,8 @@ class LineSearch:
         self._armijo_const = armijo_const
         self._wolfe_curvature_const = wolfe_curvature_const
         self._lin_solver = lin_solver
+        self._bool_plot_cost_function = bool_plot_cost_function
+
 
     def set_wolfe_conditions_constants(self):
         return None
@@ -62,6 +65,13 @@ class LineSearch:
         self._iter_cnter = 0
         # Initialize current stepsize
         self._alpha_k = self._alpha
+
+        # Initialize a list used if plot_cost_function == True
+        self._f_val_history = []
+
+        # Initialize a list of the configurations of the robot
+        self._xval_history = [x0]
+
 
         # Start
         while True:
@@ -103,13 +113,22 @@ class LineSearch:
             self._alpha_k = self._compute_stepsize()
 
             # Update solution
-            self._xval_k = self._xval_k + self._alpha_k * self._search_dir_k
-
+            self._xval_k = self._compute_next_step()
             # Update iteration counter
             self._iter_cnter += 1
 
+            # Adding the cost function to the history
+            self._f_val_history.append(self._fval_k)
+
+            # Adding the current solution to the history
+            self._xval_history.append(self._xval_k)
+
         # Print output message
         self._print_output()
+
+        # If the user wants to plot the cost function
+        if self._bool_plot_cost_function:
+            self._plot_cost_function()
 
         # Return
         return self._xval_k, self._fval_k, self._gradval_k
@@ -167,7 +186,7 @@ class LineSearch:
         # If the algorithm converged
         if self._convergence_condition():
             print()
-            print("Gradient descent successfully converged in %d iterations." %
+            print( "descent successfully converged in %d iterations." %
                   self._iter_cnter)
             print("Optimal function value: %.4e." % self._fval_k)
             print("Optimality conditions : %.4e." % self._norm_gradfval_k)
@@ -271,6 +290,28 @@ class LineSearch:
             alpha = self._beta * alpha
         # Return
         return alpha
+    
+    def _compute_next_step(self):
+        """Computes the next step of the iterations.
+
+        Returns
+        -------
+        xval_k+1
+            The next value of xval_k, depending on the search direction and the alpha found by the linesearch.
+        """
+
+        return self._xval_k + self._alpha_k * self._search_dir_k
+
+    def _plot_cost_function(self):
+        try: 
+            import matplotlib.pyplot as plt
+            plt.plot(self._f_val_history, "-o")
+            plt.xlabel("Iterations")
+            plt.ylabel("Value of the cost function")
+            plt.title("Plot of the value of the cost function through the iterations")
+            plt.show()
+        except:
+            print("No module named matplotlib.pyplot") 
 
 
 if __name__ == "__main__":

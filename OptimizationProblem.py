@@ -1,11 +1,11 @@
 import numpy as np
 import pinocchio as pin
-from robot_wrapper import robot_wrapper
-from visualizer import create_visualizer
-# import hppfcl
+from RobotWrapper import RobotWrapper
+from create_visualizer import create_visualizer
 
-class robot_optimization():
+# This class is for defining the optimization problem and computing the cost function, its gradient and hessian.
 
+class OptimizationProblem():
     def __init__(self, rmodel: pin.Model,rdata: pin.Data, gmodel: pin.GeometryModel, gdata: pin.GeometryData, vis):
         """Initialize the class with the models and datas of the robot.
 
@@ -72,7 +72,7 @@ class robot_optimization():
         pose_frame2 = self.get_transform_from_Frame(frame_geom2)
 
         # Multiplying one frame by the inverse of the other to obtain the distance
-        dist = pose_frame1 * pose_frame2.inverse()
+        dist = pose_frame1.inverse() * pose_frame2
         return dist.translation
     
     def compute_cost_function(self, q: np.ndarray):
@@ -114,7 +114,7 @@ class robot_optimization():
 
         # Computing the Jacobian at the frame of the end effector. 
         jacobian = pin.computeFrameJacobian(
-            self._rmodel, self._rdata, q, self._rmodel.getFrameId("endeff"), pin.LOCAL)[:3, :]
+            self._rmodel, self._rdata, q, self._rmodel.getFrameId("endeff"), pin.WORLD)[:3, :]
         return np.dot(jacobian.transpose(), dist)
     
     def _compute_hessian(self, q: np.ndarray):
@@ -130,7 +130,7 @@ class robot_optimization():
         Hessian matrix : np.ndaraay
             Hessian matrix at a given q configuration of the robot
         """
-        return pin.computeFrameJacobian(self._rmodel, self._rdata, q, self._rmodel.getFrameId("endeff"), pin.LOCAL)
+        return pin.computeFrameJacobian(self._rmodel, self._rdata, q, self._rmodel.getFrameId("endeff"), pin.WORLD)
 
     def callback(self, q: np.ndarray):
         self._vis.display(q)
@@ -148,8 +148,8 @@ class robot_optimization():
 
 if __name__ == "__main__":
     
-    robot_wrapper_test = robot_wrapper()
-    robot, rmodel, gmodel = robot_wrapper_test(target=True)
+    robot_wrapper = RobotWrapper()
+    robot, rmodel, gmodel = robot_wrapper(target=True)
     rdata = rmodel.createData()
     gdata = gmodel.createData()
     vis = create_visualizer(robot)
@@ -161,6 +161,6 @@ if __name__ == "__main__":
     pin.updateGeometryPlacements(rmodel, rdata, gmodel, gdata, q) 
     vis.display(q)
 
-    rob = robot_optimization(rmodel, rdata, gmodel, gdata, vis)
+    rob = OptimizationProblem(rmodel, rdata, gmodel, gdata, vis)
     grad = rob.compute_gradient_cost_function(q) 
     print(grad)
