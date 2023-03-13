@@ -1,3 +1,28 @@
+# 2-Clause BSD License
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+
+# 1. Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+
+# 2. Redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import numpy as np
 import pinocchio as pin
 from pinocchio.visualize import MeshcatVisualizer
@@ -70,51 +95,56 @@ class SolverWithDisplay(Solver):
                 The next value of xval_k, depending on the search direction and the alpha found by the linesearch.
             """
             next_xval = self._xval_k + self._alpha_k * self._search_dir_k
-            vis.display(next_xval)
+            optimization_problem.callback(next_xval)
             return next_xval
 
 if __name__ == "__main__":
 
+    # Getting rid of the randomness of the problem
     pin.seed(0)
+
+    # Unwrapping the robot and adding the sphere as a target
     robot_wrapper = RobotWrapper()
     robot, rmodel, gmodel = robot_wrapper(target=True)
+    
+    # Creating the datas of the models
     rdata = rmodel.createData()
     gdata = gmodel.createData()
+
+    # Creating the visualizer of the robot
     vis = create_visualizer(robot)
+
+    # Creating a random configuration that will be used for the initial position of the robot
     q = pin.randomConfiguration(rmodel)
 
+    # Creating the object allowing the computation of the cost, gradient and hessian of the optimization problem
     optimization_problem = OptimizationProblem(rmodel, rdata, gmodel, gdata, vis)
 
+    # Waiting for the user's input to start the script
     input()
+
+    # Creating an object Solver that will be used to solve the optimization problem
     gradient_descent = SolverWithDisplay(vis,cost_function, gradient_cost_function, hessian, max_iter=20, alpha = 1, beta = 0.5, bool_plot_cost_function= True)
     test = gradient_descent(q)
     print(f"The q are the following : {gradient_descent._xval_history}")
 
-    # print(gradient_descent._xval_history[0])
-
-    # q0 = gradient_descent._xval_history[0]
-
-    # test_dist = robot_optimization_object._compute_vector_between_two_frames("endeff_geom", "target_geom", q0)
-
-    # print(f"Test dist : {test_dist}")
+    # Start of the debug
 
     input()
+    # SE3 of the target
     M_target = robot_wrapper._M_target
     print(f'M_target : {M_target}')
+
+    # Configuration vector to attain the target with the end effector
     q_target = robot_wrapper._q_target
     print(f'q_target : {q_target}')
+
+    # Going to the target
     pin.framesForwardKinematics(rmodel, rdata, q_target)
     pin.updateGeometryPlacements(rmodel, rdata, gmodel, gdata, q_target)
+
+    # Visualizing the configuration
     vis.display(q_target)
     print(f'cost_function(q_target) : {cost_function(q_target)}')
     print(f'gradient_cost_function(q_target) : {gradient_cost_function(q_target)}')
     print(f'Distance between the frames end effector and target when going to q_target (which is the ) : {np.linalg.norm(optimization_problem._compute_vector_between_two_frames("endeff_geom", "target_geom", q_target))}')
-    print("--------------------------")
-    # q = np.array([5.16500284, -4.67222658, 14.19583246, -2.21594461,  5.86370682,
-    #               -3.78744479])
-    # pin.framesForwardKinematics(rmodel, rdata, q_target)
-    # pin.updateGeometryPlacements(rmodel, rdata, gmodel, gdata, q)
-    # vis.display(q)
-    # print(f'cost_function(q) : {cost_function(q)}')
-    # print(f'Distance between the frames end effector and target : {np.linalg.norm(robot_optimization_object._compute_vector_between_two_frames("endeff_geom", "target_geom", q))}')
-
