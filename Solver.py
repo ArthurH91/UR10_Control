@@ -212,7 +212,7 @@ class Solver:
         # If the algorithm converged
         if self._convergence_condition():
             print()
-            print( "descent successfully converged in %d iterations." %
+            print(self._step_type, "descent successfully converged in %d iterations." %
                   self._iter_cnter)
             print("Optimal function value: %.4e." % self._fval_k)
             print("Optimality conditions : %.4e." % self._norm_gradfval_k)
@@ -220,8 +220,8 @@ class Solver:
         # If the algorithm exceeded the iterations
         if self._exceeded_maximum_iterations():
             print()
-            print(
-                "Gradient descent exceeded the maximum number (%d) of iterations." % self._max_iter)
+            print(self._step_type,
+                "descent exceeded the maximum number (%d) of iterations." % self._max_iter)
             print("Current function value: %.4e." % self._fval_k)
             print("Current optimality conditions : %.4e." %
                   self._norm_gradfval_k)
