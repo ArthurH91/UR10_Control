@@ -96,6 +96,7 @@ class SolverWithDisplay(Solver):
             """
             next_xval = self._xval_k + self._alpha_k * self._search_dir_k
             optimization_problem.callback(next_xval)
+            input()
             return next_xval
 
 if __name__ == "__main__":
@@ -115,7 +116,8 @@ if __name__ == "__main__":
     vis = create_visualizer(robot)
 
     # Creating a random configuration that will be used for the initial position of the robot
-    q = pin.randomConfiguration(rmodel)
+    q0 = pin.randomConfiguration(rmodel)
+    robot.q0 = q0
 
     # Creating the object allowing the computation of the cost, gradient and hessian of the optimization problem
     optimization_problem = OptimizationProblem(rmodel, rdata, gmodel, gdata, vis)
@@ -124,11 +126,11 @@ if __name__ == "__main__":
     input()
 
     # Creating an object Solver that will be used to solve the optimization problem
-    newton_method = SolverWithDisplay(vis,cost_function, gradient_cost_function, hessian, max_iter=50, alpha = 1, beta = 0.5, bool_plot_cost_function= True, step_type="newton")
-    results = newton_method(q)
+    newton_method = SolverWithDisplay(vis,cost_function, gradient_cost_function, hessian, max_iter=10, alpha = 1, beta = 0.5, bool_plot_cost_function= True, step_type="newton")
+    results = newton_method(q0)
 
     print(f"The final q is : {newton_method._xval_history[-1]}")
-
+    
     # Start of the debug : 
 
     # The idea here is to make the robot reach the ball with the configuration used to determine the position of the target.
@@ -139,6 +141,11 @@ if __name__ == "__main__":
     # SE3 of the target
     M_target = robot_wrapper._M_target
     print(f' The SE3 of the target is : {M_target}')
+
+    # Terminal organ position$
+    frame_Id = gmodel.getGeometryId("endeff_geom")
+    p_organ = gdata.oMg[frame_Id]
+    print(f"P_organ : {p_organ}")
 
     # Configuration vector to attain the target with the end effector
     q_target = robot_wrapper._q_target
@@ -155,3 +162,4 @@ if __name__ == "__main__":
     print(f'cost_function(q_target) : {cost_function(q_target)}')
     print(f'gradient_cost_function(q_target) : {gradient_cost_function(q_target)}')
     print(f'Distance between the frames end effector and target when going to q_target : {np.linalg.norm(optimization_problem._compute_vector_between_two_frames("endeff_geom", "target_geom", q_target))}')
+
