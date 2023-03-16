@@ -262,7 +262,11 @@ class Solver:
         if self._step_type == "l2_steepest":
             return -self._gradval_k
         if self._step_type == "newton":
-            return self._lin_solver(self._hessval_k, -self._gradval_k)
+            try:
+                return self._lin_solver(self._hessval_k, -self._gradval_k)
+            except:
+                print("Warning, the hessian matrix cannot be inversed. Pseudo inverse used here")
+                return - np.linalg.pinv(self._hessval_k) * self._gradval_k
         if self._step_type == "bfgs":
             return self._compute_bfgs_step()
 
@@ -341,7 +345,7 @@ class Solver:
 
 
 class SolverWithDisplay(Solver):
-    def __init__(self, vis, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1000, eps=0.000001, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=0.0001, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False, time_sleep = 2e-2):
+    def __init__(self, vis, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1000, eps=0.000001, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=0.0001, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False, time_sleep = 0):
         """ Supercharge the init method of linesearch to include a meshcat visualizer, for a pinocchio problem.
 
         Parameters

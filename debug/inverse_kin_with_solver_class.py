@@ -129,8 +129,8 @@ def hessian(q: np.ndarray):
     Hessian matrix : np.ndaraay
         Hessian matrix at a given q configuration of the robot
     """
-    pin.framesForwardKinematics(rmodel, rdata, q)
-    return pin.computeFrameJacobian(rmodel, rdata, q, EndeffID, pin.LOCAL)
+    jacobian_val = jacobian(q)
+    return jacobian_val.T @ jacobian_val
 
 
 def callback(q : np.ndarray):
@@ -176,14 +176,13 @@ assert (np.linalg.norm(J-Jd) < 1e-5)
 
 # Function visualizing the result 
 
-
 # Solving the problem with a gradient descent
 
-# gradient_descent = SolverWithDisplay(vis,cost, gradient_cost)
-# results_GD = gradient_descent(q0)
+gradient_descent = SolverWithDisplay(vis,cost, gradient_cost, bool_plot_cost_function=True, time_sleep=1e-3)
+results_GD = gradient_descent(q0)
 
-input()
+# input()
 # Solving the problem with a newton's method 
 
-newton_method = SolverWithDisplay(vis, cost, gradient_cost, hessian, step_type="newton")
-results_NM = newton_method(q0)
+# newton_method = SolverWithDisplay(vis, cost, gradient_cost, hessian, step_type="newton")
+# results_NM = newton_method(q0)
