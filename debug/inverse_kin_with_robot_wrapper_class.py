@@ -28,7 +28,7 @@ vis = create_visualizer(robot)
 # Initial configuration
 pin.seed(0)
 q0 = pin.randomConfiguration(rmodel)
-robot.q0  = q0
+robot.q0 = q0
 
 vis.display(q0)
 
@@ -60,7 +60,7 @@ def residual(q: np.ndarray):
     return (p - target)
 
 
-def cost(q):
+def cost(q: np.ndarray):
     """Compute the cost of the configuration q. The cost is quadratic here.
 
     Parameters
@@ -76,7 +76,7 @@ def cost(q):
     return 0.5 * np.linalg.norm(residual(q))
 
 
-def jacobian(q):
+def jacobian(q: np.ndarray):
     """Compute the jacobian of the configuration q.
 
     Parameters
@@ -90,7 +90,7 @@ def jacobian(q):
         Jacobian of the robot at the end effector at a configuration q, size 3 x rmodel.nq. 
     """
     # Computing the jacobian of the joints
-    pin.computeJointJacobians(rmodel, rdata)
+    pin.computeJointJacobians(rmodel, rdata, q)
 
     # Computing the jacobien in the LOCAL_WORLD_ALIGNED coordonates system at the pose of the end effector.
     J = pin.getFrameJacobian(
@@ -98,7 +98,7 @@ def jacobian(q):
     return J
 
 
-def gradient_cost(q):
+def gradient_cost(q: np.ndarray):
     """Compute the gradient of the cost function at a configuration q.
 
     Parameters
@@ -115,7 +115,7 @@ def gradient_cost(q):
     return np.dot(jacobian(q).T, residual(q))
 
 
-def callback(q):
+def callback(q: np.ndarray):
     vis.display(q)
     time.sleep(1e-2)
 
@@ -156,48 +156,81 @@ Jd = numdiff(residual, q)
 J = jacobian(q)
 assert (np.linalg.norm(J-Jd) < 1e-5)
 
+# Functions solving the problem :
+
+
+def BFGS(q0: np.ndarray, ALPHA=.1, MAX_ITER=50, plot=False):
+    """Optimize the configuration of the robot to reach the target.
+
+    Parameters
+    ----------
+    q0 : np.ndarray
+        Initial configuration of the robot.
+    ALPHA : float, optional
+        Step of the descent, by default .1
+    MAX_ITER : int, optional
+        Number max of iterations, by default 50
+    plot : bool, optional
+        plotting the cost function through iterations, by default False
+
+    Returns
+    -------
+    res_list : list
+        List of the residuals through iterations
+    q_list : list
+        List of the configurations through iterations
+    cost_list : list
+        List of the cost through iterations
+    """
+
+    # Creating lists for storing the results and configurations
+    res_list = []
+    q_list = [q0]
+    cost_list = []
+
+    q = q0
+
+    for i in range(MAX_ITER):
+
+        # Computing the residuals at the configuration q.
+        res = residual(q)
+
+        # Computing the jacobian at the end effector pose.
+        J = jacobian(q)
+
+        # Computing the cost value of the configuration q.
+        costval = cost(q)
+
+        # Computing the next step of q.
+        q -= ALPHA * np.linalg.pinv(J)@res  # BFGS
+
+        # Filling the lists
+        res_list.append(np.linalg.norm(res))
+        q_list.append(q)
+        cost_list.append(costval)
+
+        # Printing the outputs
+        print(f" || {i} | {costval} ||")
+
+        # Updating the visualizer
+        callback(q)
+
+    if plot:
+        # Plotting the results
+        plt.plot(cost_list)
+        plt.xlabel("iterations")
+        plt.ylabel("cost value")
+        plt.title("Cost through the iterations")
+        plt.show()
+
+    return res_list, q_list, cost_list
+
 # Solving the problem
+
 
 # Step coefficient
 ALPHA = .1
 
 MAX_ITER = 50
 
-# Creating lists for storing the results and configurations
-res_list = []
-q_list = [q0]
-cost_list = []
-
-
-for i in range(MAX_ITER):
-
-    # Computing the residuals at the configuration q.
-    res = residual(q)
-
-    # Computing the jacobian at the end effector pose.
-    J = jacobian(q)
-
-    # Computing the cost value of the configuration q.
-    costval = cost(q)
-
-    # Computing the next step of q.
-    q -= ALPHA * np.linalg.pinv(J)@res  # BFGS
-
-    # Filling the lists
-    res_list.append(np.linalg.norm(res))
-    q_list.append(q)
-    cost_list.append(costval)
-
-    # Printing the outputs
-    print(f" || {i} | {costval} ||")
-
-    # Updating the visualizer
-    callback(q)
-
-
-# Plotting the results
-plt.plot(cost_list)
-plt.xlabel("iterations")
-plt.ylabel("cost value")
-plt.title("Cost through the iterations")
-plt.show()
+res_list, q_list, cost_list = BFGS(q0, ALPHA, MAX_ITER, True)
