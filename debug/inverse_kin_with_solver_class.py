@@ -1,12 +1,8 @@
 import time
 import numpy as np
 import pinocchio as pin
-import hppfcl
 import copy
-import matplotlib.pyplot as plt
 
-
-import example_robot_data as robex
 from create_visualizer import create_visualizer
 from RobotWrapper import RobotWrapper
 from Solver import SolverWithDisplay
@@ -176,13 +172,14 @@ assert (np.linalg.norm(J-Jd) < 1e-5)
 
 # Function visualizing the result 
 
+eps = 1e-4
+
 # Solving the problem with a gradient descent
 
-gradient_descent = SolverWithDisplay(vis,cost, gradient_cost, bool_plot_cost_function=True, time_sleep=1e-3)
+gradient_descent = SolverWithDisplay(vis,cost, gradient_cost, bool_plot_cost_function=True, time_sleep=1e-3, eps=eps)
 results_GD = gradient_descent(q0)
 
-# input()
 # Solving the problem with a newton's method 
 
-# newton_method = SolverWithDisplay(vis, cost, gradient_cost, hessian, step_type="newton")
-# results_NM = newton_method(q0)
+newton_method = SolverWithDisplay(vis, cost, gradient_cost, hessian, step_type="newton", bool_plot_cost_function=True, time_sleep=0.1, eps = eps)
+results_NM = newton_method(q0)

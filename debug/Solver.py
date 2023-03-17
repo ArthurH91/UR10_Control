@@ -266,7 +266,7 @@ class Solver:
                 return self._lin_solver(self._hessval_k, -self._gradval_k)
             except:
                 print("Warning, the hessian matrix cannot be inversed. Pseudo inverse used here")
-                return - np.linalg.pinv(self._hessval_k) * self._gradval_k
+                return - np.linalg.pinv(self._hessval_k) @ self._gradval_k
         if self._step_type == "bfgs":
             return self._compute_bfgs_step()
 
