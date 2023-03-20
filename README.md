@@ -56,7 +56,7 @@ meshcat-server
 In another terminal window : 
 
 ``` 
-python Ball_reaching_with_gradient_descent.py 
+Inverse_kin_with_QP_class.py 
 ``` 
 
 ## Note :
