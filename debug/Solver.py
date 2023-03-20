@@ -25,13 +25,13 @@
 
 
 import numpy as np
-import time
 
 class Solver:
-    def __init__(self, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False):
+    def __init__(self, callback, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False, verbose = False):
         """Initialize solver object with the cost function and its gradient, along with numerical and categorical parameters.
 
         Args:
+            callback (function handle): Callback at each iteration, can be a display of meshcat for instance.
             f (function handle): Function handle of the minimization objective function.
             grad (function handle): Function handle of the gradient of the minimization objective function.
             hess (function handle, optional): Function handle of the hessian of the minimization objective function. Defaults to None.
@@ -46,10 +46,12 @@ class Solver:
             armijo_const (float, optional): Constant in the checking of Armijo condition. Defaults to 1e-4.
             wolfe_curvature_const (float, optional): Constant in the checking of the stong Wolfe curvature condition. Defaults to 0.8.
             lin_solver (function handle, optional): Solver for linear systems. Defaults to np.linalg.solve.
-            bool_plot_cost_function (bool, optional): Boolean determining whether the user wants to print a plot of the cost function, by default False
+            bool_plot_cost_function (bool, optional): Boolean determining whether the user wants to print a plot of the cost function, by default False.
+            verbose (bool, optional): Boolean determining whether the user wants all the iterations to be printed, by default False.
         """
 
         # Initialize the object
+        self._callback = callback
         self._f = f
         self._grad = grad
         self._hess = hess
@@ -65,6 +67,7 @@ class Solver:
         self._wolfe_curvature_const = wolfe_curvature_const
         self._lin_solver = lin_solver
         self._bool_plot_cost_function = bool_plot_cost_function
+        self._verbose = verbose
 
 
     def set_wolfe_conditions_constants(self):
@@ -82,8 +85,9 @@ class Solver:
         fval: Function value at the solution of the search.
         gradfval: Function gradient value at the solution of the search.
         """
-        # Print header
-        self._print_header()
+        if self._verbose:
+            # Print header
+            self._print_header()
 
         # Initialize guess
         self._xval_k = x0
@@ -93,7 +97,7 @@ class Solver:
         self._alpha_k = self._alpha
 
         # Initialize a list used if plot_cost_function == True
-        self._f_val_history = []
+        self._fval_history = []
 
         # Initialize a list of the configurations of the robot
         self._xval_history = [x0]
@@ -119,11 +123,12 @@ class Solver:
             # Evaluate norm of gradient
             self._norm_gradfval_k = np.linalg.norm(self._gradval_k)
 
-            # Print current iterate
-            self._print_iteration()
-            # Every 30 iterations print header
-            if self._iter_cnter % 30 == 29:
-                self._print_header()
+            if self._verbose:
+                # Print current iterate
+                self._print_iteration()
+                # Every 30 iterations print header
+                if self._iter_cnter % 30 == 29:
+                    self._print_header()
 
             # Check stopping conditions
             if self._convergence_condition() or self._exceeded_maximum_iterations():
@@ -144,7 +149,7 @@ class Solver:
             self._iter_cnter += 1
 
             # Adding the cost function to the history
-            self._f_val_history.append(self._fval_k)
+            self._fval_history.append(self._fval_k)
 
             # Adding the current solution to the history
             self._xval_history.append(self._xval_k)
@@ -265,7 +270,8 @@ class Solver:
             try:
                 return self._lin_solver(self._hessval_k, -self._gradval_k)
             except:
-                print("Warning, the hessian matrix cannot be inversed. Pseudo inverse used here")
+                if self._verbose:
+                    print("Warning, the hessian matrix cannot be inversed. Pseudo inverse used here")
                 return - np.linalg.pinv(self._hessval_k) @ self._gradval_k
         if self._step_type == "bfgs":
             return self._compute_bfgs_step()
@@ -329,77 +335,22 @@ class Solver:
         xval_k+1
             The next value of xval_k, depending on the search direction and the alpha found by the linesearch.
         """
-
-        return self._xval_k + self._alpha_k * self._search_dir_k
+        new_q = self._xval_k + self._alpha_k * self._search_dir_k
+        self._callback(new_q)
+        return new_q
 
     def _plot_cost_function(self):
         try: 
             import matplotlib.pyplot as plt
-            plt.plot(self._f_val_history, "-o")
+            plt.plot(self._fval_history, "-o")
             plt.xlabel("Iterations")
             plt.ylabel("Value of the cost function")
             plt.title("Plot of the value of the cost function through the iterations")
+            plt.yscale('log')
             plt.show()
         except:
             print("No module named matplotlib.pyplot") 
 
-
-class SolverWithDisplay(Solver):
-    def __init__(self, vis, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1000, eps=0.000001, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=0.0001, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False, time_sleep = 0):
-        """ Supercharge the init method of linesearch to include a meshcat visualizer, for a pinocchio problem.
-
-        Parameters
-        ----------
-        vis : Meshcat.Visualizer
-            Visualizer used for displaying the robot.
-        f : function handle
-            Function handle of the minimization objective function.
-        grad : function handle
-            Function handle of the gradient of the minimization objective function.
-        hess : _type_, optional
-            Function handle of the hessian of the minimization objective function. Defaults to None, by default None
-        alpha : float, optional
-            Initial guess for step size. Defaults to 0.5, by default 0.5
-        alpha_max : int, optional
-            Maximum step size, by default 10
-        beta : float, optional
-            Default decrease on backtracking, by default 0.8
-        max_iter : int, optional
-            Maximum number of iterations, by default 1000
-        eps : float, optional
-            Tolerance for convergence, by default 0.000001
-        ls_type : str, optional
-            Linesearch type, by default "backtracking", full linesearch is to be implemented
-        step_type : str, optional
-            Type of step ("newton", "l2_steepest", "l1_steepest", ...), by default "l2_steepest"
-        cond : str, optional
-            Conditions to check at each iteration, by default "Armijo"
-        armijo_const : float, optional
-            Constant in the checking of Armijo condition, by default 0.0001
-        wolfe_curvature_const : float, optional
-            Constant in the checking of the stong Wolfe curvature condition, by default 0.8
-        lin_solver : _type_, optional
-            Solver for linear systems. Defaults to np.linalg.solve, by default np.linalg.solve
-        bool_plot_cost_function : bool, optional
-            Boolean determining whether the user wants to print a plot of the cost function, by default False
-        """
-        super().__init__(f, grad, hess, alpha, alpha_max, beta, max_iter, eps, ls_type, step_type,
-                         cond, armijo_const, wolfe_curvature_const, lin_solver, bool_plot_cost_function)
-        self._vis = vis
-        self._time_sleep = time_sleep
-
-    def _compute_next_step(self):
-        """Computes the next step of the iterations.
-
-            Returns
-            -------
-            xval_k+1
-                The next value of xval_k, depending on the search direction and the alpha found by the linesearch.
-            """
-        next_xval = self._xval_k + self._alpha_k * self._search_dir_k
-        self._vis.display(next_xval)
-        time.sleep(self._time_sleep)
-        return next_xval
 
 if __name__ == "__main__":
 

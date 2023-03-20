@@ -80,7 +80,7 @@ class QuadratricProblemInverseKinematics():
         cost : float
             Cost of the configuration q. 
         """
-        return 0.5 * np.linalg.norm(self.residual(q))
+        return 0.5 * np.linalg.norm(self.residual(q))**2
     
     def jacobian(self, q: np.ndarray):
         """Compute the jacobian of the configuration q.
