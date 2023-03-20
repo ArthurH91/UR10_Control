@@ -140,6 +140,7 @@ class RobotWrapper():
         geom_target.meshColor = self._color
         self._gmodel.addGeometryObject(geom_target)
 
+
     def _generate_reachable_SE3_vector(self):
         """ Generate a SE3 vector that can be reached by the robot.
 
@@ -157,6 +158,7 @@ class RobotWrapper():
         pin.framesForwardKinematics(self._rmodel, ndata, self._q_target)
 
         return ndata.oMf[self._rmodel.getFrameId('endeff')]
+
 
 
 if __name__ == "__main__":
