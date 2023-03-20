@@ -1,6 +1,6 @@
 # UR10 Inverse Kinematics Solver 
 
-This repository contains 9 Python files that compute the inverse kinematics of a UR10 robot to reach a target. The main function is the **Inverse_kin_with_QP_class.py** file which combines all the modules to solve a quadratic problem.
+This repository contains 6 Python files that compute the inverse kinematics of a UR10 robot to reach a target. The main function is the **Inverse_kin_with_QP_class.py** file which combines all the modules to solve a quadratic problem.
 
 ![image](https://user-images.githubusercontent.com/106057062/224975355-e9bff0a2-8c18-47fd-8722-87852da0360a.png)
 
