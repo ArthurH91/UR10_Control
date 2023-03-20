@@ -1,6 +1,6 @@
 # UR10 Inverse Kinematics Solver 
 
-This repository contains 6 Python files that compute the inverse kinematics of a UR10 robot to reach a target. The main function is the **Ball_reaching_with_gradient_descent.py** file which combines all the modules to solve a quadratic problem.
+This repository contains 9 Python files that compute the inverse kinematics of a UR10 robot to reach a target. The main function is the **Inverse_kin_with_QP_class.py** file which combines all the modules to solve a quadratic problem.
 
 ![image](https://user-images.githubusercontent.com/106057062/224975355-e9bff0a2-8c18-47fd-8722-87852da0360a.png)
 
@@ -11,13 +11,14 @@ The **create_visualizer.py** file is a module to create a meshcat.Visualizer of 
 
 The **RobotWrapper.py** file is a module to unwrap an URDF and add a end_effector frame and if the user wants, a sphere that can be used as a target along its target frame.
 
-The **Solver.py** file is a module solving a unconstrained optimization problem by gradient method or newton method. A BFGS method is planned to be developped but not done. 
+The **Solver.py** file is a module solving a unconstrained optimization problem by gradient method or newton method.
 
-The **OptimizationProblem.py** is a module computing the cost function of a certain quradratic problem, the gradient and the hessian matrix. 
+The **QuadraticProblemInverseKinematics.py** is a module computing the cost function of a certain quradratic problem, the gradient and the hessian matrix. 
 
-The **Ball_reaching_with_gradient_descent.py** is the "main" function of this repo as it is combining all the modules to solve the following quadratic problem : 
+The **Inverse_kin_with_QP_class.py** is the "main" function of this repo as it is combining all the modules to solve the following quadratic problem : 
 
 - An UR10 has a random initial configuration, with a sphere as a target. It must reach the target. Hence, the cost function is the squared distance between the target and the end effector.
+
 
 ## Maths behind this problem
 
