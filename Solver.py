@@ -27,14 +27,14 @@
 import numpy as np
 
 class Solver:
-    def __init__(self, callback, f, grad, hess=None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False, verbose = False):
+    def __init__(self, f, grad, hess=None, callback = None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False, verbose = False):
         """Initialize solver object with the cost function and its gradient, along with numerical and categorical parameters.
 
         Args:
-            callback (function handle): Callback at each iteration, can be a display of meshcat for instance.
             f (function handle): Function handle of the minimization objective function.
             grad (function handle): Function handle of the gradient of the minimization objective function.
             hess (function handle, optional): Function handle of the hessian of the minimization objective function. Defaults to None.
+            callback (function handle, optional): Callback at each iteration, can be a display of meshcat for instance. Defaults to None.
             alpha (float, optional): Initial guess for step size. Defaults to 0.5.
             alpha_max (float, optional): Maximum step size. Defaults to 10.
             beta (float, optional): Default decrease on backtracking. Defaults to 0.8.
@@ -336,7 +336,8 @@ class Solver:
             The next value of xval_k, depending on the search direction and the alpha found by the linesearch.
         """
         new_q = self._xval_k + self._alpha_k * self._search_dir_k
-        self._callback(new_q)
+        if self._callback is not None:
+            self._callback(new_q)
         return new_q
 
     def _plot_cost_function(self):
