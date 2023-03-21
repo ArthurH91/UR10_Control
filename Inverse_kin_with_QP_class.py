@@ -34,15 +34,15 @@ if __name__ == "__main__":
 
     # Function visualizing the result
 
-    eps = 1e-4
+    eps = 1e-8   
 
     # Solving the problem with a gradient descent
-    gradient_descent = Solver(callback, QP.cost, QP.gradient_cost, bool_plot_cost_function=True, eps=eps, max_iter = 1000)
+    gradient_descent = Solver(QP.cost, QP.gradient_cost, callback=callback, bool_plot_cost_function=True, eps=eps, max_iter = 1000)
     results_GD = gradient_descent(q0)
     list_q_gd = gradient_descent._fval_history
 
     # Solving the problem with a newton's method
-    newton_method = Solver(callback, QP.cost, QP.gradient_cost, QP.hessian,
+    newton_method = Solver( QP.cost, QP.gradient_cost, QP.hessian,callback=callback,
                                     step_type="newton", bool_plot_cost_function=True, eps=eps, verbose=True)
     results_NM = newton_method(q0)
     list_q_nm = newton_method._fval_history
