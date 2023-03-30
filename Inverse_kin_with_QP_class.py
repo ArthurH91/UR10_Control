@@ -62,4 +62,5 @@ if __name__ == "__main__":
     plt.xlabel("Iterations")
     plt.ylabel("Value of the cost function")
     plt.title('Minimization of the cost function')
+    plt.yscale("log")
     plt.show()
