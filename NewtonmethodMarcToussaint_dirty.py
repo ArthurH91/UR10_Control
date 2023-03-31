@@ -72,6 +72,13 @@ def Newton_method_MT(x0: np.ndarray, f, grad, hess, max_iter=1e3, callback=None,
     # Create a list for the values of cost function
     list_fval = []
 
+    # Printing a small explanation of the algorithm
+    print_start()
+
+    # Printing the header if the user wants a verbose solver
+    if verbose:
+        print_header()
+
     # Start
     while True:
         # Cost of the step
@@ -82,6 +89,7 @@ def Newton_method_MT(x0: np.ndarray, f, grad, hess, max_iter=1e3, callback=None,
         norm_gradval_k = np.linalg.norm(gradval_k)
         # Hessian of the cost function
         hessval_k = hess(xval_k)
+
 
         # Linesearch
         Ls_bool = False
@@ -101,9 +109,15 @@ def Newton_method_MT(x0: np.ndarray, f, grad, hess, max_iter=1e3, callback=None,
         # Computing next step
         xval_k += alpha_k * search_dir_k
 
-        callback(xval_k)
+        # Function 
+        if callback is not None:
+            callback(xval_k)
+        
+        if verbose:
+            print_iteration(iter_cnter, fval_k, norm_gradval_k, alpha_k)
+
         # Checking the convergence of the algorithm
-        if convergence(norm_gradval_k, tol) or iter_cnter >= max_iter:
+        if convergence(norm_gradval_k, fval_k, tol, iter_cnter) or exceed_max_iter(iter_cnter, max_iter, fval_k, norm_gradval_k):
             break
         alpha_k = min(varrho_alpha_plus* alpha_k, 1)
 
@@ -156,7 +170,7 @@ def backtracking(f, xval_k: np.ndarray, alpha_k: float, search_dir_k: np.ndarray
             return False, alpha_k
     return True, alpha_k
 
-def convergence(norm_gradval_k: float, tol: float):
+def convergence(norm_gradfval_k: float, fval_k, tol: float, iter_cnter: int):
     """Returns boolean whether the convergence criteria is met
 
     Parameters
@@ -171,10 +185,54 @@ def convergence(norm_gradval_k: float, tol: float):
     convergence : bool
         boolean describing whether the convergence criteria is met
     """
-    if norm_gradval_k < tol:
+    if norm_gradfval_k < tol:
+        print_output_conv(iter_cnter, fval_k, norm_gradfval_k)
         return True
     return False
 
+
+def exceed_max_iter(iter_cnter: int, max_iter: int, fval_k: float, norm_gradfval_k: float):
+    
+    exceed = iter_cnter >= max_iter
+    if exceed:
+        print_output_exceed(max_iter, fval_k, norm_gradfval_k)
+    return exceed
+
+def print_start():
+    print("Start of the Newton method of Marc Toussaint")
+
+def print_header():
+        print("{:<7}".format("Iter.") + " | " + "{:^10}".format("f(x)") + 
+              " | " + "{:^10}".format("||df(x)||") + " | " + "{:^10}".format("||d||"))
+
+def print_iteration(iter_cnter: int, fval_k: float, norm_gradfval_k : float, alpha_k : float):
+    """Prints the information of a single iteration of the gradient descent algorithm.
+
+    Properties used:
+        iter_cnter (int): Iteration counter.
+        fval_k (float): Function value at current iterate.
+        norm_gradfval_k (float): Gradient norm value at current iterate.
+        alpha_k (float): Size of the step at current iterate.
+    """
+    print(("%7d" % iter_cnter) + " | " + ("%.4e" % fval_k) + " | " +
+            ("%.4e" % norm_gradfval_k) + " | " + ("%.4e" % alpha_k))
+
+
+def print_output_conv(iter_cnter: int, fval_k: float, norm_gradfval_k: float):
+        
+        print()
+        print("Newton descent successfully converged in %d iterations." %iter_cnter)
+        print("Optimal function value: %.4e." % fval_k)
+        print("Optimality conditions : %.4e." % norm_gradfval_k)
+
+def print_output_exceed(max_iter: int, fval_k: float, norm_gradfval_k: float):
+    
+    print()
+    print("Newton descent exceeded the maximum number (%d) of iterations." %
+          max_iter)
+    print("Current function value: %.4e." % fval_k)
+    print("Current optimality conditions : %.4e." %
+        norm_gradfval_k)
 
 
 if __name__ == "__main__":
@@ -202,7 +260,7 @@ if __name__ == "__main__":
     vis.display(q0)
 
     # 
-    list_fval = Newton_method_MT(q0, QP.cost, QP.gradient_cost, QP.hessian, callback=callback)
+    list_fval = Newton_method_MT(q0, QP.cost, QP.gradient_cost, QP.hessian, callback=callback, verbose= True)
 
     # Plotting the results 
     plt.plot(list_fval)
