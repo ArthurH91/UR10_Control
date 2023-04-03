@@ -133,6 +133,11 @@ def Newton_method_MT(x0: np.ndarray, f, grad, hess, max_iter=1e3, callback=None,
             break
         alpha_k = min(varrho_alpha_plus* alpha_k, 1)
 
+        # Updating the trust-region
+
+        if alpha_k == 1:
+            damping /= 10
+
         # Iterate the loop
         iter_cnter += 1
 
