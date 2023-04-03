@@ -109,7 +109,7 @@ class Solver:
             # Evaluate function
             self._fval_k = self._f(self._xval_k)
             # Evaluate gradient
-            self._gradval_k = self._grad(self._xval_k)
+            self._gradfval_k = self._grad(self._xval_k)
             # Evaluate hessian if step_type = newton
             if self._step_type == "newton":
                 self._hessval_k = self._hess(self._xval_k)
@@ -121,7 +121,7 @@ class Solver:
                 self._hessval_k = None
 
             # Evaluate norm of gradient
-            self._norm_gradfval_k = np.linalg.norm(self._gradval_k)
+            self._norm_gradfval_k = np.linalg.norm(self._gradfval_k)
 
             if self._verbose:
                 # Print current iterate
@@ -162,7 +162,7 @@ class Solver:
             self._plot_cost_function()
 
         # Return
-        return self._xval_k, self._fval_k, self._gradval_k
+        return self._xval_k, self._fval_k, self._gradfval_k
 
     def _exceeded_maximum_iterations(self):
         """Determines if the algorithm exceeded maximum iteration count.
@@ -237,7 +237,7 @@ class Solver:
             float: Directional derivative at current iterate.
         """
         # Product between current gradient and current search direction
-        return np.dot(self._gradval_k, self._search_dir_k)
+        return np.dot(self._gradfval_k, self._search_dir_k)
 
     def _compute_directional_derivative(self, xval: np.ndarray, search_dir: np.ndarray):
         """Computes the directional derivative at a given point, for a given direction.
@@ -248,31 +248,31 @@ class Solver:
             float: Directional derivative at current iterate.
         """
         # Compute gradient at the point
-        gradval = self._grad(xval)
+        gradfval = self._grad(xval)
         # Return directional derivative as the dot product between the gradient
         # and the search direction
-        return np.dot(gradval, search_dir)
+        return np.dot(gradfval, search_dir)
 
     def _compute_search_direction(self):
         """Computes the search direction for the line search.
 
         Properties used:
             self._step_type (string): Type of search direction to compute.
-            self._gradval_k (np.ndarray): Function gradient value at current iterate.
+            self._gradfval_k (np.ndarray): Function gradient value at current iterate.
             self._hessval_k (np.ndarray, optional): Value of the hessian fonction at the current iteration. Defaults to None.
 
             self._lin_solver (function handle, optional): Solver for linear systems. Defaults to np.linalg.solve.
         """
         # If we want the steepest descent direction in the L2 norm
         if self._step_type == "l2_steepest":
-            return -self._gradval_k
+            return -self._gradfval_k
         if self._step_type == "newton":
             try:
-                return self._lin_solver(self._hessval_k, -self._gradval_k)
+                return self._lin_solver(self._hessval_k, -self._gradfval_k)
             except:
                 if self._verbose:
                     print("Warning, the hessian matrix cannot be inversed. Pseudo inverse used here")
-                return - np.linalg.pinv(self._hessval_k) @ self._gradval_k
+                return - np.linalg.pinv(self._hessval_k) @ self._gradfval_k
         if self._step_type == "bfgs":
             return self._compute_bfgs_step()
 
