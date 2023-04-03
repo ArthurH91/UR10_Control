@@ -72,6 +72,18 @@ def Newton_method_MT(x0: np.ndarray, f, grad, hess, max_iter=1e3, callback=None,
     # Create a list for the values of cost function
     list_fval = []
 
+    # Create a list for the values of the gradient function
+
+    list_gradfval = []
+
+    # Create a list for the values of step size
+
+    list_alphak = []
+
+    # Create a list for the values of the regularization 
+
+    list_regularization_k = []
+
     # Printing a small explanation of the algorithm
     print_start()
 
@@ -127,7 +139,16 @@ def Newton_method_MT(x0: np.ndarray, f, grad, hess, max_iter=1e3, callback=None,
         # Adding the cost function value to the list
         list_fval.append(fval_k)
 
-    return list_fval
+        # Adding the step size to the list 
+        list_alphak.append(alpha_k)
+
+        # Adding the value of the norm of the gradient to the list
+        list_gradfval.append(norm_gradval_k)
+
+        # Adding the value of the regularization to the list
+        list_regularization_k.append(damping)
+
+    return list_fval, list_gradfval, list_alphak, list_regularization_k
 
 
 
@@ -164,7 +185,7 @@ def backtracking(f, xval_k: np.ndarray, alpha_k: float, search_dir_k: np.ndarray
     while f(xval_k + alpha_k * search_dir_k) > fval_k + varrho_ls * alpha_k * np.dot(gradval_k, search_dir_k):
         # Decreasing stepsize
         alpha_k = varrho_alpha_moins * alpha_k
-
+        
         # If the step length is too small, the step is refused.
         if alpha_k <= 2e-10:
             return False, alpha_k
@@ -260,12 +281,36 @@ if __name__ == "__main__":
     vis.display(q0)
 
     # 
-    list_fval = Newton_method_MT(q0, QP.cost, QP.gradient_cost, QP.hessian, callback=callback, verbose= True)
+    list_fval, list_gradfkval, list_alphak, list_regularization  = Newton_method_MT(q0, QP.cost, QP.gradient_cost, QP.hessian, callback=callback, verbose= True, initial_damping=1e-9)
 
     # Plotting the results 
+    plt.subplot(411)
     plt.plot(list_fval)
     plt.yscale("log")
-    plt.ylabel("value of the cost function")
+    plt.ylabel("Cost")
     plt.xlabel("Iterations")
-    plt.title("Values of the cost function through the iterations")
+    plt.title("Cost through the iterations")
+
+    plt.subplot(412)
+    plt.plot(list_gradfkval)
+    plt.yscale("log")
+    plt.ylabel("Gradient")
+    plt.xlabel("Iterations")
+    plt.title("Gradient through the iterations")
+
+    plt.subplot(413)
+    plt.plot(list_alphak)
+    plt.yscale("log")
+    plt.ylabel("Alpha")
+    plt.xlabel("Iterations")
+    plt.title("Alpha through the iterations")
+
+    plt.subplot(414)
+    plt.plot(list_regularization)
+    plt.yscale("log")
+    plt.ylabel("Regularization")
+    plt.xlabel("Iterations")
+    plt.title("Regularization through the iterations")
+
+    plt.suptitle("Newton method marc Toussaint")
     plt.show()
