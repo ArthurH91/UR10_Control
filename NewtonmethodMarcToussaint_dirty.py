@@ -6,7 +6,7 @@ import numpy as np
 from create_visualizer import create_visualizer
 from RobotWrapper import RobotWrapper
 from QuadraticProblemInverseKinematics import QuadratricProblemInverseKinematics
-
+from Solver import Solver
 
 def callback(q):
     vis.display(q)
@@ -282,36 +282,54 @@ if __name__ == "__main__":
     q0 = pin.randomConfiguration(rmodel)
     robot.q0 = q0
 
+    # Setting the tolerance 
+
+    eps = 1e-8
+
     # Displaying the initial configuration
     vis.display(q0)
 
-    # 
-    list_fval, list_gradfkval, list_alphak, list_regularization  = Newton_method_MT(q0, QP.cost, QP.gradient_cost, QP.hessian, callback=callback, verbose= True, initial_damping=1e-9)
+    # Marc Toussaint Method
+    list_fval_mt, list_gradfkval_mt, list_alphak_mt, list_regularization_mt  = Newton_method_MT(q0, QP.cost, QP.gradient_cost, QP.hessian, callback=callback, verbose= True, initial_damping=1e-9, tol=eps)
+
+
+    input()
+    # Linesearch method 
+    newton_method = Solver( QP.cost, QP.gradient_cost, QP.hessian,callback=callback,
+                                    step_type="newton", bool_plot_cost_function=False, eps=eps, verbose=True)
+    
+    results_NM = newton_method(q0)
+    
+    list_fval_nm, list_gradfkval_nm, list_alphak_nm = newton_method._fval_history, newton_method._gradfval_history, newton_method._alphak_history
+
+
 
     # Plotting the results 
     plt.subplot(411)
-    plt.plot(list_fval)
+    plt.plot(list_fval_mt, "b", label = "Marc Toussaint's method")
+    plt.plot()
     plt.yscale("log")
     plt.ylabel("Cost")
     plt.xlabel("Iterations")
     plt.title("Cost through the iterations")
+    plt.legend()
 
     plt.subplot(412)
-    plt.plot(list_gradfkval)
+    plt.plot(list_gradfkval_mt, "b", label = "Marc Toussaint's method")
     plt.yscale("log")
     plt.ylabel("Gradient")
     plt.xlabel("Iterations")
     plt.title("Gradient through the iterations")
 
     plt.subplot(413)
-    plt.plot(list_alphak)
+    plt.plot(list_alphak_mt,  "b", label="Marc Toussaint's method")
     plt.yscale("log")
     plt.ylabel("Alpha")
     plt.xlabel("Iterations")
     plt.title("Alpha through the iterations")
 
     plt.subplot(414)
-    plt.plot(list_regularization)
+    plt.plot(list_regularization_mt, "b", label="Marc Toussaint's method")
     plt.yscale("log")
     plt.ylabel("Regularization")
     plt.xlabel("Iterations")
