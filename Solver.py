@@ -102,6 +102,11 @@ class Solver:
         # Initialize a list of the configurations of the robot
         self._xval_history = [x0]
 
+        # Create a list for the values of the gradient function
+        self._gradfval_history = []
+
+        # Create a list for the values of step size
+        self._alphak_history = []
 
         # Start
         while True:
