@@ -27,7 +27,7 @@
 import numpy as np
 
 class Solver:
-    def __init__(self, f, grad, hess=None, callback = None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_cost_function=False, verbose = False):
+    def __init__(self, f, grad, hess=None, callback = None, alpha=0.5, alpha_max=10, beta=0.8, max_iter=1e3, eps=1e-6, ls_type="backtracking", step_type="l2_steepest", cond="Armijo", armijo_const=1e-4, wolfe_curvature_const=0.8, lin_solver=np.linalg.solve, bool_plot_results=False, verbose = False):
         """Initialize solver object with the cost function and its gradient, along with numerical and categorical parameters.
 
         Args:
@@ -46,7 +46,7 @@ class Solver:
             armijo_const (float, optional): Constant in the checking of Armijo condition. Defaults to 1e-4.
             wolfe_curvature_const (float, optional): Constant in the checking of the stong Wolfe curvature condition. Defaults to 0.8.
             lin_solver (function handle, optional): Solver for linear systems. Defaults to np.linalg.solve.
-            bool_plot_cost_function (bool, optional): Boolean determining whether the user wants to print a plot of the cost function, by default False.
+            bool_plot_results (bool, optional): Boolean determining whether the user wants to print a plot of the outputs, ie the cost function, the values of the cost function, the gradient, the alphas and the regularization term through the iterations, by default False.
             verbose (bool, optional): Boolean determining whether the user wants all the iterations to be printed, by default False.
         """
 
@@ -66,7 +66,7 @@ class Solver:
         self._armijo_const = armijo_const
         self._wolfe_curvature_const = wolfe_curvature_const
         self._lin_solver = lin_solver
-        self._bool_plot_cost_function = bool_plot_cost_function
+        self._bool_plot_results = bool_plot_results
         self._verbose = verbose
 
 
@@ -159,12 +159,19 @@ class Solver:
             # Adding the current solution to the history
             self._xval_history.append(self._xval_k)
 
+            # Adding the current gradient value to the history
+            self._gradfval_history.append(self._norm_gradfval_k)
+
+            # Adding the current alpha value to the history
+            self._alphak_history.append(self._alpha_k)
+
+
         # Print output message
         self._print_output()
 
         # If the user wants to plot the cost function
-        if self._bool_plot_cost_function:
-            self._plot_cost_function()
+        if self._bool_plot_results:
+            self._plot_results()
 
         # Return
         return self._xval_k, self._fval_k, self._gradfval_k
@@ -345,18 +352,39 @@ class Solver:
             self._callback(new_q)
         return new_q
 
-    def _plot_cost_function(self):
+    def _plot_results(self):
+        """Plotting the outputs, which are the values of the cost function, the gradient, the alphas and the regularization term through the iterations
+        """
         try: 
             import matplotlib.pyplot as plt
-            plt.plot(self._fval_history, "-o")
+            plt.subplot(311)
+            plt.plot(self._fval_history, "-ob",
+                     label="Marc Toussaint's method")
+            plt.yscale("log")
+            plt.ylabel("Cost")
+            plt.legend()
+
+            plt.subplot(312)
+            plt.plot(self._gradfval_history, "-ob",
+                     label="Marc Toussaint's method")
+            plt.yscale("log")
+            plt.ylabel("Gradient")
+            plt.legend()
+
+            plt.subplot(313)
+            plt.plot(self._alphak_history,  "-ob",
+                     label="Marc Toussaint's method")
+            plt.yscale("log")
+            plt.ylabel("Alpha")
+            plt.legend()
             plt.xlabel("Iterations")
-            plt.ylabel("Value of the cost function")
-            plt.title("Plot of the value of the cost function through the iterations")
-            plt.yscale('log')
+
+            plt.suptitle(
+                " Linesearch Newton method")
             plt.show()
         except:
             print("No module named matplotlib.pyplot") 
-
+    
 
 if __name__ == "__main__":
 

@@ -37,30 +37,23 @@ if __name__ == "__main__":
     eps = 1e-8   
 
     # Solving the problem with a gradient descent
-    gradient_descent = Solver(QP.cost, QP.gradient_cost, callback=callback, bool_plot_cost_function=True, eps=eps, max_iter = 1000)
+    gradient_descent = Solver(QP.cost, QP.gradient_cost, callback=callback, bool_plot_results=True, eps=eps, max_iter = 1000)
     results_GD = gradient_descent(q0)
-    list_q_gd = gradient_descent._fval_history
+    list_q_gd = gradient_descent._gradfval_history
 
     # Solving the problem with a newton's method
     newton_method = Solver( QP.cost, QP.gradient_cost, QP.hessian,callback=callback,
-                                    step_type="newton", bool_plot_cost_function=True, eps=eps, verbose=True)
+                                    step_type="newton", bool_plot_results=True, eps=eps, verbose=True)
     results_NM = newton_method(q0)
-    list_q_nm = newton_method._fval_history
+    list_q_nm = newton_method._gradfval_history
 
     # Comparing the results
 
-    # To compare the results, having the same number of elements in the list is mandatory 
-    if len(list_q_nm) < len(list_q_gd):
-        while len(list_q_nm) < len(list_q_gd):
-            list_q_nm.append(0)
-    else:
-        while len(list_q_gd) < len(list_q_nm):
-            list_q_gd.append(0)
     plt.plot(list_q_gd,"-o", label = "Gradient descent")
     plt.plot(list_q_nm, "-o", label = "Gauss Newton method")
     plt.legend()
     plt.xlabel("Iterations")
-    plt.ylabel("Value of the cost function")
-    plt.title('Minimization of the cost function')
+    plt.ylabel("Value of the gradient")
+    plt.title('Minimization of the gradient')
     plt.yscale("log")
     plt.show()
