@@ -359,28 +359,28 @@ class Solver:
             import matplotlib.pyplot as plt
             plt.subplot(311)
             plt.plot(self._fval_history, "-ob",
-                     label="Marc Toussaint's method")
+                     label=f"{self._step_type} method")
             plt.yscale("log")
             plt.ylabel("Cost")
             plt.legend()
 
             plt.subplot(312)
             plt.plot(self._gradfval_history, "-ob",
-                     label="Marc Toussaint's method")
+                     label=f"{self._step_type} method")
             plt.yscale("log")
             plt.ylabel("Gradient")
             plt.legend()
 
             plt.subplot(313)
             plt.plot(self._alphak_history,  "-ob",
-                     label="Marc Toussaint's method")
+                     label=f"{self._step_type} method")
             plt.yscale("log")
             plt.ylabel("Alpha")
             plt.legend()
             plt.xlabel("Iterations")
 
             plt.suptitle(
-                " Linesearch Newton method")
+                f"{self._step_type} method")
             plt.show()
         except:
             print("No module named matplotlib.pyplot") 
