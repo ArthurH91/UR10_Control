@@ -18,11 +18,11 @@ The **Solver.py** file is a module solving an unconstrained optimization problem
 
 The **test_functions.py** file is a module testing the functions of the module **Solver.py**
 
-The **TestSolverGradientNewtonMethod.py** file is a module using the solver **Solver.py** to solve the QP, both with a gradient method and a newton method and compares both of them.
+The **SolvingQPWithSolverGradientNewtonMethod.py** file is a module using the solver **Solver.py** to solve the QP, both with a gradient method and a newton method and compares both of them.
 
 The **NewtonMethodMarcToussaint.py** file is a module solving an unconstrained optimization problem by using a trust region method on a Newton algorithm.
 
-The **TestSolverMarcToussaint.py** file is a module using the solver **NewtonMethodMarcToussaint** to solve the QP.
+The **SolvingQPWithSolverMarcToussaint.py** file is a module using the solver **NewtonMethodMarcToussaint** to solve the QP.
 
 The **ComparisonMarcToussaintNewtonLinesearch.py** is the "main" module of this repo as it is combining all the modules to solve the following quadratic problem : 
 
