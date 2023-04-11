@@ -234,7 +234,7 @@ class NewtonMethodMt(Solver):
         search_dir_k : np.ndarray
             search direction for trust region
         """
-        return self._lin_solver(self._hessval_k + self._regu_k * np.eye(len(self._xval_k)), - self._gradfval_k)
+        return self._lin_solver(self._hessval_k + self._regu_k * np.eye(len(self._gradfval_k)), - self._gradfval_k)
     
 
     def _print_start(self):
