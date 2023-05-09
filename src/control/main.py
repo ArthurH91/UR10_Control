@@ -3,10 +3,11 @@ import matplotlib.pyplot as plt
 import time
 import numpy as np
 
-from create_visualizer import create_visualizer
-from robot_wrapper import RobotWrapper
+from wrapper_meshcat import MeshcatWrapper
+from wrapper_robot import RobotWrapper
 from quadratic_problem_inverse_kinematics import QuadratricProblemInverseKinematics
-from newton_method_marc_toussaint import NewtonMethodMt
+from solver_trs import NewtonMethodMt
+from utils import generate_reachable_target
 
 
 def callback(q):
@@ -15,12 +16,18 @@ def callback(q):
 
 # Creation of the robot
 robot_wrapper = RobotWrapper()
-robot, rmodel, gmodel = robot_wrapper(target=True)
+robot, rmodel, gmodel = robot_wrapper()
 rdata = rmodel.createData()
 gdata = gmodel.createData()
 
-# Open the viewer
-vis = create_visualizer(robot)
+# Generating the target
+TARGET = generate_reachable_target(rmodel, rdata)
+
+# Generating the meshcat visualizer
+MeshcatVis = MeshcatWrapper()
+vis = MeshcatVis.visualize(TARGET, robot=robot)
+
+# 
 
 # Waiting for the user to press enter to start the optimization problem
 input()

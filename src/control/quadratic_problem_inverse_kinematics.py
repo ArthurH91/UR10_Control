@@ -1,15 +1,23 @@
 import numpy as np
 import pinocchio as pin
-import copy
+import hppfcl
 
-from robot_wrapper import RobotWrapper
-from create_visualizer import create_visualizer
+from wrapper_robot import RobotWrapper
+import pydiffcol
 
 # This class is for defining the optimization problem and computing the cost function, its gradient and hessian.
 
 
-class QuadratricProblemInverseKinematics():
-    def __init__(self, rmodel: pin.Model, rdata: pin.Data, gmodel: pin.GeometryModel, gdata: pin.GeometryData, vis):
+class QuadratricProblemInverseKinematics:
+    def __init__(
+        self,
+        rmodel: pin.Model,
+        rdata: pin.Data,
+        gmodel: pin.GeometryModel,
+        gdata: pin.GeometryData,
+        target: np.ndarray,
+        target_shape: hppfcl.ShapeBase,
+    ):
         """Initialize the class with the models and datas of the robot.
 
         Parameters
@@ -22,50 +30,22 @@ class QuadratricProblemInverseKinematics():
             Geometrical model of the robot
         _gdata : pin.GeometryData
             Geometrical data of the model of the robot
-        q : np.ndarray
-            Array of configuration of the robot, size robot.nq
-        _vis : meschat.Visualizer
-            Visualizer used for displaying the robot.
+
         """
         self._rmodel = rmodel
         self._rdata = rdata
         self._gmodel = gmodel
         self._gdata = gdata
         self._vis = vis
+        self._target = target
+        self._target_shape = target_shape
 
         # Storing the IDs of the frames of the end effector and the target
 
-        self._TargetID = self._rmodel.getFrameId('target')
-        assert (self._TargetID < len(self._rmodel.frames))
-
-        self._EndeffID = self._rmodel.getFrameId('endeff')
-        assert (self._EndeffID < len(self._rmodel.frames))
-
-        # Storing the cartesian pose of the target
-        self._target = self._rdata.oMf[self._TargetID].translation
-
-    def residual(self, q: np.ndarray):
-        """Compute residuals from a configuration q. 
-        Here, the residuals are calculated by the difference between the cartesian position of the end effector and the target.
-
-        Parameters
-        ----------
-        q : np.ndarray
-            Array of configuration of the robot, size rmodel.nq.
-
-        Returns
-        -------
-        residual : np.ndarray
-            Array of the residuals at a configuration q, size 3. 
-        """
-
-        # Forward kinematics of the robot at the configuration q.
-        pin.framesForwardKinematics(self._rmodel, self._rdata, q)
-
-        # Obtaining the cartesian position of the end effector.
-        p = self._rdata.oMf[self._EndeffID].translation
-        return (p - self._target)
-
+        self._EndeffID = self._rmodel.getFrameId("endeff")
+        self._EndeffID_geom = self._gmodel.getGeometryId("endeff_geom")
+        assert self._EndeffID < len(self._rmodel.frames)
+        assert self._EndeffID_geom < len(self._gmodel.geometryObjects)
 
     def cost(self, q: np.ndarray):
         """Compute the cost of the configuration q. The cost is quadratic here.
@@ -78,33 +58,55 @@ class QuadratricProblemInverseKinematics():
         Returns
         -------
         cost : float
-            Cost of the configuration q. 
+            Cost of the configuration q.
         """
-        return 0.5 * np.linalg.norm(self.residual(q))**2
-    
-    def jacobian(self, q: np.ndarray):
-        """Compute the jacobian of the configuration q.
 
-        Parameters
-        ----------
-        q : np.ndarray
-            Array of configuration of the robot, size rmodel.nq.
+        # Distance request for pydiffcol
+        self._req = pydiffcol.DistanceRequest()
+        self._res = pydiffcol.DistanceResult()
 
-        Returns
-        -------
-        jacobian : np.ndarray
-            Jacobian of the robot at the end effector at a configuration q, size 3 x rmodel.nq. 
-        """
-        # Computing the jacobian of the joints
-        pin.computeJointJacobians(self._rmodel, self._rdata, q)
+        # Forward kinematics of the robot at the configuration q.
+        pin.framesForwardKinematics(self._rmodel, self._rdata, q)
 
-        # Computing the jacobien in the LOCAL_WORLD_ALIGNED coordonates system at the pose of the end effector.
-        J = pin.getFrameJacobian(
-            self._rmodel, self._rdata, self._EndeffID, pin.LOCAL_WORLD_ALIGNED)[:3]
-        
-        return J
-    
-    def gradient_cost(self, q: np.ndarray):
+        # Obtaining the cartesian position of the end effector.
+        self.endeff_Transform = self._rdata.oMf[self._EndeffID]
+        self.endeff_Shape = self._gmodel.geometryObjects[self._EndeffID_geom].geometry
+
+        residual = pydiffcol.distance(
+            self.endeff_Shape,
+            self.endeff_Transform,
+            self._target_shape,
+            self._target,
+            self._req,
+            self._res,
+        )
+
+        return 0.5 * np.linalg.norm(residual) ** 2
+
+    # def jacobian(self, q: np.ndarray):
+    #     """Compute the jacobian of the configuration q.
+
+    #     Parameters
+    #     ----------
+    #     q : np.ndarray
+    #         Array of configuration of the robot, size rmodel.nq.
+
+    #     Returns
+    #     -------
+    #     jacobian : np.ndarray
+    #         Jacobian of the robot at the end effector at a configuration q, size 3 x rmodel.nq.
+    #     """
+    #     # Computing the jacobian of the joints
+    #     pin.computeJointJacobians(self._rmodel, self._rdata, q)
+
+    #     # Computing the jacobien in the LOCAL_WORLD_ALIGNED coordonates system at the pose of the end effector.
+    #     J = pin.getFrameJacobian(
+    #         self._rmodel, self._rdata, self._EndeffID, pin.LOCAL_WORLD_ALIGNED
+    #     )[:3]
+
+    #     return J
+
+    def grad(self, q: np.ndarray):
         """Compute the gradient of the cost function at a configuration q.
 
         Parameters
@@ -117,9 +119,21 @@ class QuadratricProblemInverseKinematics():
         gradient cost : np.ndarray
             Gradient cost of the robot at the end effector at a configuration q, size rmodel.nq.
         """
-
-        return np.dot(self.jacobian(q).T, self.residual(q))
-
+        self.cost(q)
+        self._jacobian = pin.computeFrameJacobian(
+            self._rmodel, self._rdata, q, self._EndeffID, pin.LOCAL
+        )
+        jacobian_transpose = self._jacobian.transpose()
+        _ = pydiffcol.distance_derivatives(
+            self.endeff_Shape,
+            self.endeff_Transform,
+            self._target_shape,
+            self._target,
+            self._req,
+            self._res,
+        )
+        dw_dq_transpose = self._res.dw_dq.transpose()
+        return jacobian_transpose @ dw_dq_transpose @ self._res.w
 
     def hessian(self, q: np.ndarray):
         """Returns hessian matrix of the end effector at a q position
@@ -134,53 +148,44 @@ class QuadratricProblemInverseKinematics():
         Hessian matrix : np.ndaraay
             Hessian matrix at a given q configuration of the robot
         """
-        jacobian_val = self.jacobian(q)
-        return jacobian_val.T @ jacobian_val
-    
-    
-    def _numdiff(f, x, eps=1e-6):
-        """Estimate df/dx at x with finite diff of step eps
 
-        Parameters
-        ----------
-        f : function handle
-            Function evaluated for the finite differente of its gradient.
-        x : np.ndarray
-            Array at which the finite difference is calculated
-        eps : float, optional
-            Finite difference step, by default 1e-6
-
-        Returns
-        -------
-        jacobian : np.ndarray
-            Finite difference of the function f at x.
-        """
-
-        xc = x.copy()
-        f0 = copy.copy(f(x))
-        res = []
-        for i in range(len(x)):
-            xc[i] += eps
-            res.append(copy.copy(f(xc)-f0)/eps)
-            xc[i] = x[i]
-        return np.array(res).T
+        self.grad(q)
+        return self._jacobian.T @ self._jacobian
 
 
 if __name__ == "__main__":
+    from utils import generate_reachable_target
+    from wrapper_meshcat import MeshcatWrapper
 
+    # Creating the robot
     robot_wrapper = RobotWrapper()
-    robot, rmodel, gmodel = robot_wrapper(target=True)
+    robot, rmodel, gmodel = robot_wrapper()
     rdata = rmodel.createData()
     gdata = gmodel.createData()
-    vis = create_visualizer(robot)
 
+    # Generating a target
+    TARGET = generate_reachable_target(rmodel, rdata)
+
+    # Generating an initial configuration
     q = pin.randomConfiguration(rmodel)
     pin.framesForwardKinematics(rmodel, rdata, q)
 
     # THIS STEP IS MANDATORY OTHERWISE THE FRAMES AREN'T UPDATED
     pin.updateGeometryPlacements(rmodel, rdata, gmodel, gdata, q)
-    vis.display(q)
 
-    QP = QuadratricProblemInverseKinematics(rmodel, rdata, gmodel, gdata, vis)
-    grad = QP.gradient_cost(q)
-    print(grad)
+    # Creating the visualizer
+    MeshcatVis = MeshcatWrapper()
+    vis = MeshcatVis.visualize(TARGET, robot=robot)
+
+    # The target shape is a ball of 5e-2 radii at the TARGET position
+
+    TARGET_SHAPE = hppfcl.Sphere(5e-2)
+
+    QP = QuadratricProblemInverseKinematics(
+        rmodel, rdata, gmodel, gdata, TARGET, TARGET_SHAPE
+    )
+
+    res = QP.cost(q)
+    print(res)
+    gradval = QP.grad(q)
+    hessval = QP.hessian(q)

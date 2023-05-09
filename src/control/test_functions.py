@@ -24,7 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numpy as np
-from Solver import Solver
+from solver_base import Solver
 
 def test_function_1(x):
     f = np.sum(np.square(x))

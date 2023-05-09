@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from Solver import Solver
+from solver_base import Solver
 
 
 class NewtonMethodMt(Solver):

@@ -27,13 +27,13 @@
 import numpy as np
 import pinocchio as pin
 import example_robot_data as robex
-from create_visualizer import create_visualizer
 import hppfcl
 
 # This class is for unwrapping an URDF and converting it to a model. It is also possible to add objects in the model,
 # such as a ball at a specific position.
 
-class RobotWrapper():
+
+class RobotWrapper:
     def __init__(self, scale=1.0, name_robot="ur10"):
         """Initialize the wrapper with a scaling number of the target and the name of the robot wanted to get unwrapped.
 
@@ -50,7 +50,7 @@ class RobotWrapper():
         self._rmodel = self._robot.model
         self._color = np.array([249, 136, 126, 255]) / 255
 
-    def __call__(self, target=False):
+    def __call__(self):
         """Create a robot with a new frame at the end effector position and place a hppfcl: ShapeBase cylinder at this position.
 
         Parameters
@@ -75,7 +75,7 @@ class RobotWrapper():
         # The cylinder is used to have a HPPFCL shape at the end of the robot to make contact with the target
 
         # Obtaining the frame ID of the frame tool0
-        ID_frame_tool0 = self._rmodel.getFrameId('tool0')
+        ID_frame_tool0 = self._rmodel.getFrameId("tool0")
         # Obtaining the frame tool0
         frame_tool0 = self._rmodel.frames[ID_frame_tool0]
         # Obtaining the parent joint of the frame tool0
@@ -97,72 +97,27 @@ class RobotWrapper():
         endeff_shape = hppfcl.Cylinder(endeff_radii, endeff_width)
         # Creating a pin.GeometryObject for the model of the _robot
         geom_endeff = pin.GeometryObject(
-            "endeff_geom", parent_joint, Mf_endeff, endeff_shape)
+            "endeff_geom", parent_joint, Mf_endeff, endeff_shape
+        )
         geom_endeff.meshColor = self._color
         # Add the geometry object to the geometrical model
         self._gmodel.addGeometryObject(geom_endeff)
 
-        if target:
-            self._create_target()
-
         return self._robot, self._rmodel, self._gmodel
-
-    def _create_target(self):
-        """ Updates the version of the robot models with a sphere that can be used as a target.
-
-        Returns
-        -------
-        _robot
-            Robot description of the said robot
-        _rmodel
-            Model of the robot
-        _gmodel 
-            Geometrical model of the robot
-        """
-
-        # Setup of the shape of the target (a sphere here)
-        r_target = 5e-2*self._scale
-
-        # Creation of the target
-
-        # Creating the frame of the target
-
-        self._M_target = self._generate_reachable_SE3_vector()
-
-        target_frame = pin.Frame("target", self._rmodel.getJointId(
-            "universe"), self._M_target, pin.BODY)
-        target = self._rmodel.addFrame(target_frame, False)
-        T_target = self._rmodel.frames[target].placement
-        target_shape = hppfcl.Sphere(r_target)
-        geom_target = pin.GeometryObject("target_geom", self._rmodel.getJointId(
-            "universe"), T_target, target_shape)
-
-        geom_target.meshColor = self._color
-        self._gmodel.addGeometryObject(geom_target)
-
-
-    def _generate_reachable_SE3_vector(self):
-        """ Generate a SE3 vector that can be reached by the robot.
-
-        Returns
-        -------
-        Reachable_SE3_vector
-            SE3 Vector describing a reachable position by the robot
-        """
-        
-        # Generate a random configuration of the robot, with consideration to its limits
-        self._q_target = pin.randomConfiguration(self._rmodel)
-        # Creation of a temporary model.Data, to have access to the forward kinematics.
-        ndata = self._rmodel.createData()
-        # Updating the model.Data with the framesForwardKinematics
-        pin.framesForwardKinematics(self._rmodel, ndata, self._q_target)
-
-        return ndata.oMf[self._rmodel.getFrameId('endeff')]
-
 
 
 if __name__ == "__main__":
+    from wrapper_meshcat import MeshcatWrapper
+    from utils import generate_reachable_target
 
+    # Generating the robot
     robot_wrapper = RobotWrapper()
-    robot, rmodel, gmodel = robot_wrapper(target=True)
-    vis = create_visualizer(robot)
+    robot, rmodel, gmodel = robot_wrapper()
+    rdata = rmodel.createData()
+
+    # Generate a reachable target
+    p = generate_reachable_target(rmodel, rdata, "tool0")
+
+    # Generating the meshcat visualizer
+    MeshcatVis = MeshcatWrapper()
+    vis = MeshcatVis.visualize(p, robot=robot)
