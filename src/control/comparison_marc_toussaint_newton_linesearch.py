@@ -4,10 +4,10 @@ import time
 import numpy as np
 
 from create_visualizer import create_visualizer
-from RobotWrapper import RobotWrapper
-from QuadraticProblemInverseKinematics import QuadratricProblemInverseKinematics
+from robot_wrapper import RobotWrapper
+from quadratic_problem_inverse_kinematics import QuadratricProblemInverseKinematics
 from Solver import Solver
-from NewtonMethodMarcToussaint import NewtonMethodMt
+from newton_method_marc_toussaint import NewtonMethodMt
 
 def callback(q):
     vis.display(q)

@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import time
 
 from create_visualizer import create_visualizer
-from RobotWrapper import RobotWrapper
+from robot_wrapper import RobotWrapper
 from Solver import Solver
-from QuadraticProblemInverseKinematics import QuadratricProblemInverseKinematics
+from quadratic_problem_inverse_kinematics import QuadratricProblemInverseKinematics
 
 def callback(q):
     vis.display(q)
