@@ -36,7 +36,6 @@ class QuadratricProblemInverseKinematics:
         self._rdata = rdata
         self._gmodel = gmodel
         self._gdata = gdata
-        self._vis = vis
         self._target = target
         self._target_shape = target_shape
 
@@ -82,29 +81,6 @@ class QuadratricProblemInverseKinematics:
         )
 
         return 0.5 * np.linalg.norm(residual) ** 2
-
-    # def jacobian(self, q: np.ndarray):
-    #     """Compute the jacobian of the configuration q.
-
-    #     Parameters
-    #     ----------
-    #     q : np.ndarray
-    #         Array of configuration of the robot, size rmodel.nq.
-
-    #     Returns
-    #     -------
-    #     jacobian : np.ndarray
-    #         Jacobian of the robot at the end effector at a configuration q, size 3 x rmodel.nq.
-    #     """
-    #     # Computing the jacobian of the joints
-    #     pin.computeJointJacobians(self._rmodel, self._rdata, q)
-
-    #     # Computing the jacobien in the LOCAL_WORLD_ALIGNED coordonates system at the pose of the end effector.
-    #     J = pin.getFrameJacobian(
-    #         self._rmodel, self._rdata, self._EndeffID, pin.LOCAL_WORLD_ALIGNED
-    #     )[:3]
-
-    #     return J
 
     def grad(self, q: np.ndarray):
         """Compute the gradient of the cost function at a configuration q.
@@ -154,8 +130,14 @@ class QuadratricProblemInverseKinematics:
 
 
 if __name__ == "__main__":
-    from utils import generate_reachable_target
+    from utils import generate_reachable_target, numdiff
     from wrapper_meshcat import MeshcatWrapper
+
+    def grad_numdiff(q: np.ndarray):
+        return numdiff(QP.cost, q)
+
+    def hess_numdiff(q: np.ndarray):
+        return numdiff(grad_numdiff, q)
 
     # Creating the robot
     robot_wrapper = RobotWrapper()
@@ -189,3 +171,6 @@ if __name__ == "__main__":
     print(res)
     gradval = QP.grad(q)
     hessval = QP.hessian(q)
+
+    gradval_numdiff = grad_numdiff(q)
+    hessval_numdiff = hess_numdiff(q)
