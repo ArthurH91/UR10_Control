@@ -2,7 +2,7 @@ import numpy as np
 import pinocchio as pin
 import copy
 
-from RobotWrapper import RobotWrapper
+from robot_wrapper import RobotWrapper
 from create_visualizer import create_visualizer
 
 # This class is for defining the optimization problem and computing the cost function, its gradient and hessian.

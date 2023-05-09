@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import time
 
 from create_visualizer import create_visualizer
-from RobotWrapper import RobotWrapper
+from robot_wrapper import RobotWrapper
 from Solver import Solver
-from QuadraticProblemInverseKinematics import QuadratricProblemInverseKinematics
+from quadratic_problem_inverse_kinematics import QuadratricProblemInverseKinematics
 
 def callback(q):
     vis.display(q)
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     eps = 1e-8   
 
     # Solving the problem with a gradient descent
-    gradient_descent = Solver(QP.cost, QP.gradient_cost, callback=callback, bool_plot_results=True, eps=eps, max_iter = 1000)
+    gradient_descent = Solver(QP.cost, QP.gradient_cost, callback=callback, bool_plot_results=True, eps=eps, max_iter = 100)
     results_GD = gradient_descent(q0)
     list_q_gd = gradient_descent._gradfval_history
 
