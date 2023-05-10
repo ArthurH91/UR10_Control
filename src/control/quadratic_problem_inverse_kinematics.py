@@ -64,13 +64,17 @@ class QuadratricProblemInverseKinematics:
         self._req = pydiffcol.DistanceRequest()
         self._res = pydiffcol.DistanceResult()
 
+        self._req.derivative_type = pydiffcol.DerivativeType.FirstOrderRS
+
         # Forward kinematics of the robot at the configuration q.
         pin.framesForwardKinematics(self._rmodel, self._rdata, q)
+        pin.updateGeometryPlacements(self._rmodel, self._rdata, self._gmodel, self._gdata, q)
 
         # Obtaining the cartesian position of the end effector.
         self.endeff_Transform = self._rdata.oMf[self._EndeffID]
         self.endeff_Shape = self._gmodel.geometryObjects[self._EndeffID_geom].geometry
 
+        # 
         residual = pydiffcol.distance(
             self.endeff_Shape,
             self.endeff_Transform,
@@ -96,6 +100,7 @@ class QuadratricProblemInverseKinematics:
             Gradient cost of the robot at the end effector at a configuration q, size rmodel.nq.
         """
         self.cost(q)
+        pin.computeJointJacobians(self._rmodel, self._rdata, q)
         self._jacobian = pin.computeFrameJacobian(
             self._rmodel, self._rdata, q, self._EndeffID, pin.LOCAL
         )
@@ -108,7 +113,7 @@ class QuadratricProblemInverseKinematics:
             self._req,
             self._res,
         )
-        dw_dq_transpose = self._res.dw_dq.transpose()
+        dw_dq_transpose = self._res.dw_dq1.transpose()
         return jacobian_transpose @ dw_dq_transpose @ self._res.w
 
     def hessian(self, q: np.ndarray):
@@ -130,6 +135,7 @@ class QuadratricProblemInverseKinematics:
 
 
 if __name__ == "__main__":
+
     from utils import generate_reachable_target, numdiff
     from wrapper_meshcat import MeshcatWrapper
 
