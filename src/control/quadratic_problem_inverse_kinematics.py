@@ -22,14 +22,18 @@ class QuadratricProblemInverseKinematics:
 
         Parameters
         ----------
-        _rmodel : pin.Model
+        rmodel : pin.Model
             Model of the robot
-        _rdata : pin.Data
+        rdata : pin.Data
             Data of the model of the robot
-        _gmodel : pin.GeometryModel
+        gmodel : pin.GeometryModel
             Geometrical model of the robot
-        _gdata : pin.GeometryData
+        gdata : pin.GeometryData
             Geometrical data of the model of the robot
+        target : pin.SE3
+            Pose of the target
+        target_shape : hppfcl.ShapeBase
+            Shape of the target
 
         """
         self._rmodel = rmodel
@@ -74,7 +78,7 @@ class QuadratricProblemInverseKinematics:
         self.endeff_Transform = self._rdata.oMf[self._EndeffID]
         self.endeff_Shape = self._gmodel.geometryObjects[self._EndeffID_geom].geometry
 
-        # 
+        # Computing the distance with pydiffcol
         residual = pydiffcol.distance(
             self.endeff_Shape,
             self.endeff_Transform,
@@ -99,12 +103,22 @@ class QuadratricProblemInverseKinematics:
         gradient cost : np.ndarray
             Gradient cost of the robot at the end effector at a configuration q, size rmodel.nq.
         """
+
+        # Computing the cost to initialize all the variables
         self.cost(q)
+
+        # Computing the jacobians in pinocchio
         pin.computeJointJacobians(self._rmodel, self._rdata, q)
+
+        # Getting the frame jacobian from the end effector in the LOCAL reference frame
         self._jacobian = pin.computeFrameJacobian(
             self._rmodel, self._rdata, q, self._EndeffID, pin.LOCAL
         )
+
+        # Transposing the jacobian 
         jacobian_transpose = self._jacobian.transpose()
+
+        # Computing the derivatives of the distance 
         _ = pydiffcol.distance_derivatives(
             self.endeff_Shape,
             self.endeff_Transform,
@@ -113,6 +127,8 @@ class QuadratricProblemInverseKinematics:
             self._req,
             self._res,
         )
+
+        # Transposing the derivative of the distance with regards to the end effector.
         dw_dq_transpose = self._res.dw_dq1.transpose()
         return jacobian_transpose @ dw_dq_transpose @ self._res.w
 
