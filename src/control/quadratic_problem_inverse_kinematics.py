@@ -129,8 +129,8 @@ class QuadratricProblemInverseKinematics:
         )
 
         # Transposing the derivative of the distance with regards to the end effector.
-        dw_dq_transpose = self._res.dw_dq1.transpose()
-        return jacobian_transpose @ dw_dq_transpose @ self._res.w
+        dw_dq_transpose1 = self._res.dw_dq1.transpose()
+        return jacobian_transpose @ dw_dq_transpose1 @ self._res.w
 
     def hessian(self, q: np.ndarray):
         """Returns hessian matrix of the end effector at a q position
