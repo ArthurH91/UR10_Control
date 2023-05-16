@@ -115,9 +115,6 @@ class QuadratricProblemInverseKinematics:
             self._rmodel, self._rdata, q, self._EndeffID, pin.LOCAL
         )
 
-        # Transposing the jacobian 
-        jacobian_transpose = self._jacobian.transpose()
-
         # Computing the derivatives of the distance 
         _ = pydiffcol.distance_derivatives(
             self.endeff_Shape,
@@ -128,9 +125,7 @@ class QuadratricProblemInverseKinematics:
             self._res,
         )
 
-        # Transposing the derivative of the distance with regards to the end effector.
-        dw_dq_transpose1 = self._res.dw_dq1.transpose()
-        return jacobian_transpose @ dw_dq_transpose1 @ self._res.w
+        return self._jacobian.T @ self._res.dw_dq1.T @ self._res.w
 
     def hessian(self, q: np.ndarray):
         """Returns hessian matrix of the end effector at a q position
@@ -147,7 +142,8 @@ class QuadratricProblemInverseKinematics:
         """
 
         self.grad(q)
-        return self._jacobian.T @ self._jacobian
+        self._derivative_residual = self._jacobian.T @ self._res.dw_dq1.T
+        return self._derivative_residual @ self._derivative_residual.T
 
 
 if __name__ == "__main__":

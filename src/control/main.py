@@ -10,8 +10,12 @@ from quadratic_problem_inverse_kinematics import QuadratricProblemInverseKinemat
 from solver_trs import NewtonMethodMt
 from utils import generate_reachable_target, numdiff
 
+SEED = 90 # Nice convergence 
 
-# pin.seed(5)
+
+# SEED = abs(int(np.sin(time.time() % 6.28) * 1000))
+print(f"SEED = {SEED}")
+pin.seed(SEED)
 
 def grad_numdiff(q: np.ndarray):
     return numdiff(QP.cost, q)
