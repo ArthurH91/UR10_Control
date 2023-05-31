@@ -10,10 +10,10 @@ from quadratic_problem_inverse_kinematics import QuadratricProblemInverseKinemat
 from solver_trs import NewtonMethodMt
 from utils import generate_reachable_target, numdiff
 
-SEED = 90 # Nice convergence 
+# SEED = 90 # Nice convergence 
+WITH_NUMDIFF = False
 
-
-# SEED = abs(int(np.sin(time.time() % 6.28) * 1000))
+SEED = abs(int(np.sin(time.time() % 6.28) * 1000))
 print(f"SEED = {SEED}")
 pin.seed(SEED)
 
@@ -53,7 +53,6 @@ if __name__ == "__main__":
     # Generating the meshcat visualizer
     MeshcatVis = MeshcatWrapper()
     vis = MeshcatVis.visualize(TARGET, robot=robot)
-
     # Creating the QP
     QP = QuadratricProblemInverseKinematics(
         rmodel, rdata, gmodel, gdata, TARGET, TARGET_SHAPE)
@@ -69,7 +68,6 @@ if __name__ == "__main__":
     trust_region_solver = NewtonMethodMt(QP.cost, QP.grad, QP.hessian, callback=callback, verbose= True, bool_plot_results=True, max_iter=1000)
     res = trust_region_solver(q0)
 
-    trust_region_solver = NewtonMethodMt(QP.cost, grad_numdiff, grad_numdiff, callback=callback, verbose= True, bool_plot_results=True, max_iter=500)
-
-
-    res = trust_region_solver(q0)
+    if WITH_NUMDIFF:
+        trust_region_solver = NewtonMethodMt(QP.cost, grad_numdiff, grad_numdiff, callback=callback, verbose= True, bool_plot_results=True, max_iter=500)
+        res = trust_region_solver(q0)

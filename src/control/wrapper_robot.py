@@ -93,7 +93,7 @@ class RobotWrapper:
         # Creation of the cylinder at the end of the end effector
 
         # Setting up the raddi of the cylinder
-        endeff_radii, endeff_width = 1e-2, 1e-2
+        endeff_radii = 1e-2
         # Creating a HPPFCL shape
         endeff_shape = hppfcl.Sphere(endeff_radii)
         # Creating a pin.GeometryObject for the model of the _robot
