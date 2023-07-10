@@ -72,14 +72,16 @@ class QuadratricProblemInverseKinematics:
 
         # Forward kinematics of the robot at the configuration q.
         pin.framesForwardKinematics(self._rmodel, self._rdata, q)
-        pin.updateGeometryPlacements(self._rmodel, self._rdata, self._gmodel, self._gdata, q)
+        pin.updateGeometryPlacements(
+            self._rmodel, self._rdata, self._gmodel, self._gdata, q
+        )
 
         # Obtaining the cartesian position of the end effector.
         self.endeff_Transform = self._rdata.oMf[self._EndeffID]
         self.endeff_Shape = self._gmodel.geometryObjects[self._EndeffID_geom].geometry
 
         # Computing the distance with pydiffcol
-        residual = pydiffcol.distance(
+        dist_endeff_target = pydiffcol.distance(
             self.endeff_Shape,
             self.endeff_Transform,
             self._target_shape,
@@ -87,6 +89,8 @@ class QuadratricProblemInverseKinematics:
             self._req,
             self._res,
         )
+
+        residual = self._res.w
 
         return 0.5 * np.linalg.norm(residual) ** 2
 
@@ -115,7 +119,7 @@ class QuadratricProblemInverseKinematics:
             self._rmodel, self._rdata, q, self._EndeffID, pin.LOCAL
         )
 
-        # Computing the derivatives of the distance 
+        # Computing the derivatives of the distance
         _ = pydiffcol.distance_derivatives(
             self.endeff_Shape,
             self.endeff_Transform,
@@ -147,7 +151,6 @@ class QuadratricProblemInverseKinematics:
 
 
 if __name__ == "__main__":
-
     from utils import generate_reachable_target, numdiff
     from wrapper_meshcat import MeshcatWrapper
 
